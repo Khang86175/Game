@@ -9,35 +9,67 @@ class Body{
     private:
         Vector2f toaDo;
         Vector2f speed;
-        float speedMax;
-        float acc;
+        float speedMax, acc;
         float size;
         float max_hp, hp_regen, body_dmg; // stats
 
-        CircleShape circle;
+        CircleShape body;
     public:
         Body(float x, float y, float size)
-            : toaDo(x, y), size(size), speed(0, 0), speedMax(20), acc(0.7),
+            : toaDo(x, y), size(size), speed(0, 0), speedMax(15), acc(0.5),
               max_hp(100), hp_regen(1), body_dmg(10){
-            circle.setRadius(size);
-            circle.setFillColor(Color::Blue);
-            circle.setOutlineThickness(5.f);
-            circle.setOutlineColor(Color::Cyan);
-            circle.setOrigin({size,size});
-            circle.setPosition(toaDo);
+            body.setRadius(size);
+            body.setFillColor(Color::Blue);
+            body.setOutlineThickness(5.f);
+            body.setOutlineColor(Color::Cyan);
+            body.setOrigin({size,size});
+            body.setPosition(toaDo);
         }
 
         void draw(RenderWindow &window){
-            window.draw(circle);
+            window.draw(body);
         }
 
         void move(){
             toaDo+=speed;
-            circle.setPosition(toaDo);
+            body.setPosition(toaDo);
         }
         friend void nhanVatDiChuyen(Body &body);
         
 };
+
+class Cannon{
+    private:
+        float dmg, range, bullet_speed; // stats
+        float angle; // góc bắn
+        Vector2f toaDo;
+
+        RectangleShape gun;
+    public:
+        Cannon(float x, float y) 
+            : dmg(10), range(200), bullet_speed(20), angle(0), toaDo(x, y){
+            gun.setSize({50, 15});
+            gun.setOrigin({10, 7.5});
+            gun.setFillColor(Color(153,153,153));
+            gun.setOutlineThickness(5.f);
+            gun.setOutlineColor(Color(102,102,102));
+            gun.setPosition({x,y-25});
+        }
+
+        void move(Vector2f pos){
+            toaDo = pos;
+            gun.setPosition(toaDo);
+        }
+
+        void draw(RenderWindow &window){
+            window.draw(gun);
+        }
+        void setRotation(float angle){
+            this->angle = angle;
+            gun.setRotation(degrees(angle));
+        }
+};
+
 void nhanVatDiChuyen(Body &body){
     Vector2f tangToc(0, 0);
     float maSat = 0.9;
@@ -71,11 +103,7 @@ int main() {
      
     
     int x=WIDTH/2, y=HEIGHT/2;
-    sf::RectangleShape gun(sf::Vector2f(150.f, 50.f));
-    gun.setFillColor(sf::Color(153,153,153));
-    gun.setOutlineThickness(5.f);
-    gun.setOutlineColor(sf::Color(102,102,102));
-    gun.setPosition({x,y-25});
+    
 
     sf::Font font;
     if(!font.openFromFile("arial.ttf"))
@@ -105,7 +133,6 @@ int main() {
         gun.setRotation(sf::degrees(angle));
         window.clear(sf::Color(204, 204, 204));
         window.draw(text);
-        window.draw(gun);
 
         body.draw(window);
 
