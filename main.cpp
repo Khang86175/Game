@@ -80,12 +80,8 @@ void nhanVatDiChuyen(Body &body, RenderWindow &window){
     if (Keyboard::isKeyPressed(Keyboard::Key::A)) tangToc.x -= body.acc;
     if (Keyboard::isKeyPressed(Keyboard::Key::D)) tangToc.x += body.acc;
     // cập nhật vận tốc
-    body.speed.x += tangToc.x;
-    if (body.speed.x > body.speedMax) body.speed.x = body.speedMax;
-    if (body.speed.x < -body.speedMax) body.speed.x = -body.speedMax;
-    body.speed.y += tangToc.y;
-    if (body.speed.y > body.speedMax) body.speed.y = body.speedMax;
-    if (body.speed.y < -body.speedMax) body.speed.y = -body.speedMax;
+    body.speed += tangToc;
+    float speedLen = sqrt(body.speed.x*body.speed.x + body.speed.y*body.speed.y);
     body.speed *= maSat;
     // loại bỏ vận tốc rất nhỏ tranh rung lắc
     if (abs(body.speed.x) < 0.1) body.speed.x = 0;
@@ -110,7 +106,7 @@ int main() {
     ContextSettings settings;
     settings.attributeFlags=8;
     RenderWindow window(VideoMode({WIDTH, HEIGHT}), "Diep",Style::Default, State::Windowed, settings);
-    window.setFramerateLimit(30);
+    window.setFramerateLimit(60);
     
     sf::Font font;
     if(!font.openFromFile("arial.ttf"))
