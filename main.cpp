@@ -7,48 +7,59 @@ using namespace std;
 
 class Body{
     private:
-        float x, y; // toạ độ
+        Vector2f toaDo;
+        Vector2f speed;
+        float speedMax;
+        float acc;
         float size;
-        float max_hp, hp_regen, body_dmg, speed; // stats
+        float max_hp, hp_regen, body_dmg; // stats
 
         CircleShape circle;
     public:
         Body(float x, float y, float size)
-            : x(x), y(y), size(size){
+            : toaDo(x, y), size(size), speed(0, 0), speedMax(20), acc(0.7),
+              max_hp(100), hp_regen(1), body_dmg(10){
             circle.setRadius(size);
             circle.setFillColor(Color::Blue);
             circle.setOutlineThickness(5.f);
             circle.setOutlineColor(Color::Cyan);
             circle.setOrigin({size,size});
-            circle.setPosition({x,y});
-            speed = 200;
+            circle.setPosition(toaDo);
         }
 
         void draw(RenderWindow &window){
             window.draw(circle);
         }
 
-        void move(float dt){
-            Vector2f vec(0,0);
-            if (Keyboard::isKeyPressed(Keyboard::Key::W)) vec.y -= 1;
-            if (Keyboard::isKeyPressed(Keyboard::Key::S)) vec.y += 1;
-            if (Keyboard::isKeyPressed(Keyboard::Key::A)) vec.x -= 1;
-            if (Keyboard::isKeyPressed(Keyboard::Key::D)) vec.x += 1;
-
-            if (vec.x != 0 || vec.y != 0){
-                float len = sqrt(vec.x * vec.x + vec.y * vec.y);
-                vec /= len;
-                vec *= speed * dt;
-            }
-
-            x += vec.x;
-            y += vec.y;
-            circle.setPosition({x,y});
+        void move(){
+            toaDo+=speed;
+            circle.setPosition(toaDo);
         }
+        friend void nhanVatDiChuyen(Body &body);
         
 };
+void nhanVatDiChuyen(Body &body){
+    Vector2f tangToc(0, 0);
+    float maSat = 0.9;
+    if (Keyboard::isKeyPressed(Keyboard::Key::W)) tangToc.y -= body.acc;
+    if (Keyboard::isKeyPressed(Keyboard::Key::S)) tangToc.y += body.acc;
+    if (Keyboard::isKeyPressed(Keyboard::Key::A)) tangToc.x -= body.acc;
+    if (Keyboard::isKeyPressed(Keyboard::Key::D)) tangToc.x += body.acc;
+    // cập nhật vận tốc
+    body.speed.x += tangToc.x;
+    if (body.speed.x > body.speedMax) body.speed.x = body.speedMax;
+    if (body.speed.x < -body.speedMax) body.speed.x = -body.speedMax;
+    body.speed.y += tangToc.y;
+    if (body.speed.y > body.speedMax) body.speed.y = body.speedMax;
+    if (body.speed.y < -body.speedMax) body.speed.y = -body.speedMax;
+    body.speed *= maSat;
+    // loại bỏ vận tốc rất nhỏ tranh rung lắc
+    if (abs(body.speed.x) < 0.1) body.speed.x = 0;
+    if (abs(body.speed.y) < 0.1) body.speed.y = 0;
+    body.move();
+}
 int main() {
-    int WIDTH = 600; // dài 
+    int WIDTH = 800; // dài 
     int HEIGHT = 600; // rộng
     ContextSettings settings;
     settings.attributeFlags=8;
@@ -56,7 +67,8 @@ int main() {
     window.setFramerateLimit(30);
 
     Body body(WIDTH/2, HEIGHT/2, 75);
-    Clock clock;
+
+     
     
     int x=WIDTH/2, y=HEIGHT/2;
     sf::RectangleShape gun(sf::Vector2f(150.f, 50.f));
@@ -79,8 +91,9 @@ int main() {
                 window.close();
             }
         }
-
-        float dt = clock.restart().asSeconds();
+        nhanVatDiChuyen(body);
+        
+        
 
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
         int dx=mousePos.x-x, dy=mousePos.y-y;
@@ -95,7 +108,6 @@ int main() {
         window.draw(gun);
 
         body.draw(window);
-        body.move(dt);
 
         window.display();
     }
