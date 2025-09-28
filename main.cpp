@@ -2,7 +2,95 @@
 #include <sstream>
 #include <cmath>
 #include <algorithm>
-int main() {
+#include <iostream>
+
+class Body{
+public:
+    sf::Vector2f position;
+    sf::Vector2f velocity;
+    float size;
+    float hp,maxhp,hp_regen,body_dmg;
+    sf::CircleShape body;
+
+    Body(float x, float y, float size):position({x,y}),velocity({0,0}),size(size){
+        hp=maxhp=100;
+        hp_regen=1;
+        body_dmg=2;
+        body.setRadius(size);
+        body.setFillColor(sf::Color(0,178,225));
+        body.setOutlineThickness(5.f);
+        body.setOutlineColor(sf::Color(14, 144, 178));
+        body.setOrigin({size,size});
+        body.setPosition({x,y});
+    }
+    void DrawBody(sf::RenderWindow &window){
+        window.draw(body);
+    }
+    void update(sf::Vector2f pos){
+        position=pos;
+        body.setPosition(pos);
+    }
+};
+
+class Cannon{
+public:
+    float dmg, time_to_die,speed;
+    float angle;
+    sf::Vector2f position;
+    sf::RectangleShape gun;
+
+    Cannon(float x, float y):position({x,y}),dmg(10),time_to_die(210),speed(20),angle(0){
+        gun.setSize({150.f, 50.f});
+        gun.setFillColor(sf::Color(153,153,153));
+        gun.setOutlineThickness(5.f);
+        gun.setOutlineColor(sf::Color(102,102,102));
+        gun.setOrigin({0,25});
+        gun.setPosition({x,y});
+    }
+    void update(sf::Vector2f pos, int angle){
+        position=pos;
+        gun.setPosition(pos);
+        gun.setRotation(sf::degrees(angle));
+    }
+    void DrawGun(sf::RenderWindow &window){
+        window.draw(gun);
+    }   
+};
+
+class MyTank{
+private:
+    Body body;
+    Cannon gun;
+public:
+    sf::Vector2f position;
+    sf::Vector2f velocity;
+    sf::Vector2f velocity_max;
+    float friction;
+    MyTank(float x, float y, float size):body(x,y,size),gun(x,y){
+        position={x,y};
+        velocity_max={10,10};
+        velocity={0,0};
+        friction=0.9;
+    }
+    void update(float x, float y, int angle){
+        /*velocity.x=std::clamp(velocity.x, -velocity_max.x, velocity_max.x);
+        velocity.y=std::clamp(velocity.y, -velocity_max.y, velocity_max.y);
+        position+=velocity;
+        velocity*=friction;
+        if(velocity.x<0.1 && velocity.x>-0.1)
+            velocity.x=0;
+        if(velocity.y<0.1 && velocity.y>-0.1)
+            velocity.y=0;*/
+        gun.update(position,angle);
+        body.update(position);
+    }
+    void Drawtank(sf::RenderWindow &window){
+        gun.DrawGun(window);
+        body.DrawBody(window);
+    }
+};
+
+int main(){
     int WIDTH = 600; // dài 
     int HEIGHT = 600; // rộng
     sf::ContextSettings settings;
@@ -12,17 +100,9 @@ int main() {
 
     float x=WIDTH/2,y=HEIGHT/2;
     float bodysize=75;
-    sf::CircleShape body(bodysize);
-    body.setFillColor(sf::Color(0,178,225));
-    body.setOutlineThickness(5.f);
-    body.setOutlineColor(sf::Color(14, 144, 178));
-    
-    sf::RectangleShape gun(sf::Vector2f(150.f, 50.f));
-    gun.setFillColor(sf::Color(153,153,153));
-    gun.setOutlineThickness(5.f);
-    gun.setOutlineColor(sf::Color(102,102,102));
-    gun.setPosition({x,y-25});
 
+    MyTank mytank(x,y,bodysize);
+    
     sf::Font font;
     if(!font.openFromFile("arial.ttf"))
         return -1;
@@ -30,7 +110,6 @@ int main() {
     text.setCharacterSize(14);
     text.setFillColor(sf::Color::Red);
 
-    body.setPosition({x-bodysize,y-bodysize});
     int angle=1;
 
     while(window.isOpen()){
@@ -38,20 +117,37 @@ int main() {
             if(event->is<sf::Event::Closed>()){
                 window.close();
             }
+            else if(const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()){
+                if(keyPressed->code==sf::Keyboard::Key::W){
+                    mytank.position.y-=5;
+                }
+                else if(keyPressed->code==sf::Keyboard::Key::S){
+                    mytank.position.y+=5;
+                }
+                else if(keyPressed->code==sf::Keyboard::Key::A){
+                    mytank.position.x-=5;
+                }
+                else if(keyPressed->code==sf::Keyboard::Key::D){
+                    mytank.position.x+=5;
+                }
+            }
+            
         }
-        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-        int dx=mousePos.x-x, dy=mousePos.y-y;
-        int angle=atan2(dy,dx)*180/3.14;
-        std::stringstream ss;
-        ss << mousePos.x <<" "<<mousePos.y<<" "<<angle;
-        gun.setPosition({x+cos((angle-90)*3.14/180)*25,y+sin((angle-90)*3.14/180)*25});
-        text.setString(ss.str());
-        gun.setRotation(sf::degrees(angle));
+        
         window.clear(sf::Color(204, 204, 204));
+        
+        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+        int dx=mousePos.x-mytank.position.x, dy=mousePos.y-mytank.position.y;
+        angle=atan2(dy,dx)*180/3.14;
+        std::stringstream ss;
+        ss << mousePos.x <<" "<<mousePos.y<<" "<<angle << ' '<< mytank.velocity.x << ' ' << mytank.velocity.y;
+        text.setString(ss.str());
         window.draw(text);
-        window.draw(gun);
-        window.draw(body);
+
+        mytank.update(x,y,angle);
+        mytank.Drawtank(window);
         window.display();
+        
     }
 
     return 0;
