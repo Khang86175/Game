@@ -31,7 +31,7 @@ public:
         body.setPosition(pos);
     }
 };
-
+    
 class Cannon{
 public:
     float dmg, time_to_die,speed;
@@ -39,12 +39,12 @@ public:
     sf::Vector2f position;
     sf::RectangleShape gun;
 
-    Cannon(float x, float y):position({x,y}),dmg(10),time_to_die(210),speed(20),angle(0){
-        gun.setSize({150.f, 50.f});
+    Cannon(float x, float y,float size):position({x,y}),dmg(10),time_to_die(210),speed(20),angle(0){
+        gun.setSize({size*2, size*2/3});
         gun.setFillColor(sf::Color(153,153,153));
         gun.setOutlineThickness(5.f);
         gun.setOutlineColor(sf::Color(102,102,102));
-        gun.setOrigin({0,25});
+        gun.setOrigin({0,size/3});
         gun.setPosition({x,y});
     }
     void update(sf::Vector2f pos, int angle){
@@ -64,23 +64,23 @@ private:
 public:
     sf::Vector2f position;
     sf::Vector2f velocity;
-    sf::Vector2f velocity_max;
+    float velocity_max;
     float friction;
-    MyTank(float x, float y, float size):body(x,y,size),gun(x,y){
+    MyTank(float x, float y, float size):body(x,y,size),gun(x,y,size){
         position={x,y};
-        velocity_max={10,10};
+        velocity_max=8;
         velocity={0,0};
         friction=0.9;
     }
-    void update(float x, float y, int angle){
-        /*velocity.x=std::clamp(velocity.x, -velocity_max.x, velocity_max.x);
-        velocity.y=std::clamp(velocity.y, -velocity_max.y, velocity_max.y);
-        position+=velocity;
+    void update(int angle){
         velocity*=friction;
+        velocity.x=std::clamp(velocity.x,-velocity_max,velocity_max);
+        velocity.y=std::clamp(velocity.y,-velocity_max,velocity_max);
+        position+=velocity;
         if(velocity.x<0.1 && velocity.x>-0.1)
             velocity.x=0;
         if(velocity.y<0.1 && velocity.y>-0.1)
-            velocity.y=0;*/
+            velocity.y=0;
         gun.update(position,angle);
         body.update(position);
     }
@@ -99,7 +99,7 @@ int main(){
     window.setFramerateLimit(30);
 
     float x=WIDTH/2,y=HEIGHT/2;
-    float bodysize=75;
+    float bodysize=60;
 
     MyTank mytank(x,y,bodysize);
     
@@ -117,34 +117,31 @@ int main(){
             if(event->is<sf::Event::Closed>()){
                 window.close();
             }
-            else if(const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()){
-                if(keyPressed->code==sf::Keyboard::Key::W){
-                    mytank.position.y-=5;
-                }
-                else if(keyPressed->code==sf::Keyboard::Key::S){
-                    mytank.position.y+=5;
-                }
-                else if(keyPressed->code==sf::Keyboard::Key::A){
-                    mytank.position.x-=5;
-                }
-                else if(keyPressed->code==sf::Keyboard::Key::D){
-                    mytank.position.x+=5;
-                }
-            }
-            
         }
-        
+
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)){
+            mytank.velocity.y-=1;
+        }
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)){
+            mytank.velocity.y+=1;
+        }
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)){
+            mytank.velocity.x-=1;
+        }
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)){
+            mytank.velocity.x+=1;
+        }
         window.clear(sf::Color(204, 204, 204));
         
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
         int dx=mousePos.x-mytank.position.x, dy=mousePos.y-mytank.position.y;
         angle=atan2(dy,dx)*180/3.14;
         std::stringstream ss;
+        mytank.update(angle);
         ss << mousePos.x <<" "<<mousePos.y<<" "<<angle << ' '<< mytank.velocity.x << ' ' << mytank.velocity.y;
         text.setString(ss.str());
         window.draw(text);
 
-        mytank.update(x,y,angle);
         mytank.Drawtank(window);
         window.display();
         
