@@ -4,42 +4,40 @@
 #include <algorithm>
 #include <iostream>
 
-class Body{
+class Obj{
 public:
     sf::Vector2f position;
     sf::Vector2f velocity;
-    float size;
     float hp,maxhp,hp_regen,body_dmg;
-    sf::CircleShape body;
 
-    Body(float x, float y, float size):position({x,y}),velocity({0,0}),size(size){
+    Obj(float x, float y):position({x,y}),velocity({0,0}){
         hp=maxhp=100;
         hp_regen=1;
         body_dmg=2;
-        body.setRadius(size);
-        body.setFillColor(sf::Color(0,178,225));
-        body.setOutlineThickness(5.f);
-        body.setOutlineColor(sf::Color(14, 144, 178));
-        body.setOrigin({size,size});
-        body.setPosition({x,y});
     }
-    void DrawBody(sf::RenderWindow &window){
-        window.draw(body);
+    void update(){
+        position+=velocity;
+        if(hp<maxhp)
+            hp+=hp_regen;
+        if(hp>maxhp)
+            hp=maxhp;
     }
-    void update(sf::Vector2f pos){
-        position=pos;
-        body.setPosition(pos);
+    float Getx(){
+        return position.x;
+    }
+    float Gety(){
+        return position.y;
     }
 };
     
 class Cannon{
 public:
-    float dmg, time_to_die,speed;
+    int delay;
     float angle;
     sf::Vector2f position;
     sf::RectangleShape gun;
 
-    Cannon(float x, float y,float size):position({x,y}),dmg(10),time_to_die(210),speed(20),angle(0){
+    Cannon(float x, float y,float size):position({x,y}),angle(0),delay(0){
         gun.setSize({size*2, size*2/3});
         gun.setFillColor(sf::Color(153,153,153));
         gun.setOutlineThickness(5.f);
@@ -56,50 +54,69 @@ public:
         window.draw(gun);
     }   
 };
-
 class MyTank{
-private:
-    Body body;
-    Cannon gun;
 public:
-    sf::Vector2f position;
-    sf::Vector2f velocity;
+    Obj body;
+    Cannon gun;
     float velocity_max;
+    float dpos;
     float friction;
-    MyTank(float x, float y, float size):body(x,y,size),gun(x,y,size){
-        position={x,y};
+    sf::CircleShape bodyShape;
+
+    MyTank(float x, float y, float size):body(x,y),gun(x,y,size){
+        bodyShape.setRadius(size);
+        bodyShape.setFillColor(sf::Color(0,178,225));
+        bodyShape.setOutlineThickness(5.f);
+        bodyShape.setOutlineColor(sf::Color(14, 144, 178));
+        bodyShape.setOrigin({size,size});
+        bodyShape.setPosition({x,y});
+        body.position={x,y};
+        body.velocity={0,0};
         velocity_max=8;
-        velocity={0,0};
         friction=0.9;
     }
     void update(int angle){
-        velocity*=friction;
-        velocity.x=std::clamp(velocity.x,-velocity_max,velocity_max);
-        velocity.y=std::clamp(velocity.y,-velocity_max,velocity_max);
-        position+=velocity;
-        if(velocity.x<0.1 && velocity.x>-0.1)
-            velocity.x=0;
-        if(velocity.y<0.1 && velocity.y>-0.1)
-            velocity.y=0;
-        gun.update(position,angle);
-        body.update(position);
+        body.velocity*=friction;
+        body.velocity.x=std::clamp(body.velocity.x,-velocity_max,velocity_max);
+        body.velocity.y=std::clamp(body.velocity.y,-velocity_max,velocity_max);
+        dpos=std::hypot(body.velocity.x,body.velocity.y);
+        if(dpos>velocity_max){
+            body.velocity.x=body.velocity.x/dpos*velocity_max;
+            body.velocity.y=body.velocity.y/dpos*velocity_max;
+        }
+        if(body.velocity.x<0.1 && body.velocity.x>-0.1)
+            body.velocity.x=0;
+        if(body.velocity.y<0.1 && body.velocity.y>-0.1)
+            body.velocity.y=0;
+        body.update();
+
+        gun.update(body.position,angle);
+        bodyShape.setPosition(body.position);
     }
     void Drawtank(sf::RenderWindow &window){
         gun.DrawGun(window);
-        body.DrawBody(window);
+        window.draw(bodyShape);
+    }
+    void moveX(float dx){
+        body.velocity.x+=dx;
+    }
+    void moveY(float dy){
+        body.velocity.y+=dy;
     }
 };
 
 int main(){
     int WIDTH = 600; // dài 
     int HEIGHT = 600; // rộng
-    sf::ContextSettings settings;
-    settings.attributeFlags=8;
-    sf::RenderWindow window(sf::VideoMode({WIDTH, HEIGHT}), "Diep",sf::Style::Default, sf::State::Windowed, settings);
-    window.setFramerateLimit(30);
-
+    int acceleration = 1; // gia tốc
     float x=WIDTH/2,y=HEIGHT/2;
     float bodysize=60;
+
+    sf::ContextSettings settings;
+    settings.attributeFlags=8;
+    bool fullscreen=false;
+    sf::RenderWindow window(sf::VideoMode({WIDTH, HEIGHT}), "Diep",sf::Style::Default, sf::State::Windowed, settings);
+    window.setFramerateLimit(30);
 
     MyTank mytank(x,y,bodysize);
     
@@ -113,38 +130,40 @@ int main(){
     int angle=1;
 
     while(window.isOpen()){
-        while(auto event = window.pollEvent()){
-            if(event->is<sf::Event::Closed>()){
+        while (const std::optional event = window.pollEvent()){
+            if (event->is<sf::Event::Closed>()){
                 window.close();
             }
+            else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()){
+                if (keyPressed->scancode == sf::Keyboard::Scancode::Escape)
+                    window.close();
+            }
         }
-
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W)){
-            mytank.velocity.y-=1;
+        
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)){
+            mytank.moveY(-acceleration);
         }
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)){
-            mytank.velocity.y+=1;
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)){
+            mytank.moveY(acceleration);
         }
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A)){
-            mytank.velocity.x-=1;
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)){
+            mytank.moveX(-acceleration);
         }
-        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D)){
-            mytank.velocity.x+=1;
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)){
+            mytank.moveX(acceleration);
         }
         window.clear(sf::Color(204, 204, 204));
-        
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-        int dx=mousePos.x-mytank.position.x, dy=mousePos.y-mytank.position.y;
+        int dx=mousePos.x-mytank.body.Getx(), dy=mousePos.y-mytank.body.Gety();
         angle=atan2(dy,dx)*180/3.14;
         std::stringstream ss;
         mytank.update(angle);
-        ss << mousePos.x <<" "<<mousePos.y<<" "<<angle << ' '<< mytank.velocity.x << ' ' << mytank.velocity.y;
+        ss << mytank.body.position.x <<" "<<mytank.body.position.y<<" "<<angle << ' '<< mytank.body.velocity.x << ' ' << mytank.body.velocity.y;
         text.setString(ss.str());
+        
         window.draw(text);
-
         mytank.Drawtank(window);
         window.display();
-        
     }
 
     return 0;
