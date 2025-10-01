@@ -72,10 +72,12 @@ public:
         bodyShape.setPosition({x,y});
         body.position={x,y};
         body.velocity={0,0};
-        velocity_max=8;
+        velocity_max=6;
         friction=0.9;
     }
     void update(int angle){
+        // hàm clamp giới hạn tốc độ
+        // hàm hypot(x,y) = sqrt(x*x+y*y)
         body.velocity*=friction;
         body.velocity.x=std::clamp(body.velocity.x,-velocity_max,velocity_max);
         body.velocity.y=std::clamp(body.velocity.y,-velocity_max,velocity_max);
@@ -108,18 +110,19 @@ public:
 int main(){
     int WIDTH = 600; // dài 
     int HEIGHT = 600; // rộng
-    int acceleration = 1; // gia tốc
-    float x=WIDTH/2,y=HEIGHT/2;
-    float bodysize=60;
+    float acceleration = 0.6; // gia tốc
+    int x=WIDTH/2,y=HEIGHT/2;
+    float bodysize=36;
 
     sf::ContextSettings settings;
-    settings.attributeFlags=8;
+    settings.antiAliasingLevel=4;
     bool fullscreen=false;
     sf::RenderWindow window(sf::VideoMode({WIDTH, HEIGHT}), "Diep",sf::Style::Default, sf::State::Windowed, settings);
     window.setFramerateLimit(30);
 
     MyTank mytank(x,y,bodysize);
-    
+
+    // tải font chữ
     sf::Font font;
     if(!font.openFromFile("arial.ttf"))
         return -1;
@@ -139,7 +142,7 @@ int main(){
                     window.close();
             }
         }
-        
+        // di chuyển 
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)){
             mytank.moveY(-acceleration);
         }
@@ -152,15 +155,18 @@ int main(){
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)){
             mytank.moveX(acceleration);
         }
-        window.clear(sf::Color(204, 204, 204));
+
+        // tính góc nòng súng
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
         int dx=mousePos.x-mytank.body.Getx(), dy=mousePos.y-mytank.body.Gety();
         angle=atan2(dy,dx)*180/3.14;
-        std::stringstream ss;
+
+        //std::stringstream ss;
+        //ss << mytank.body.position.x <<" "<<mytank.body.position.y<<" "<<angle << ' '<< mytank.body.velocity.x << ' ' << mytank.body.velocity.y;
+        //text.setString(ss.str());
+
+        window.clear(sf::Color(204, 204, 204));
         mytank.update(angle);
-        ss << mytank.body.position.x <<" "<<mytank.body.position.y<<" "<<angle << ' '<< mytank.body.velocity.x << ' ' << mytank.body.velocity.y;
-        text.setString(ss.str());
-        
         window.draw(text);
         mytank.Drawtank(window);
         window.display();
