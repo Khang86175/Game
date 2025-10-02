@@ -2,134 +2,173 @@
 #include <sstream>
 #include <cmath>
 #include <algorithm>
-using namespace sf;
-using namespace std;
+#include <iostream>
 
-class Body{
-    public:
-        Vector2f toaDo;
-        Vector2f speed;
-        float speedMax, acc;
-        float size;
-        float max_hp, hp_regen, body_dmg; // stats
+class Obj{
+public:
+    sf::Vector2f position;
+    sf::Vector2f velocity;
+    float hp,maxhp,hp_regen,body_dmg;
 
-        CircleShape body;
-    public:
-        Body(float x, float y, float size)
-            : toaDo(x, y), size(size), speed(0, 0), speedMax(15), acc(0.5),
-              max_hp(100), hp_regen(1), body_dmg(10){
-            body.setRadius(size);
-            body.setFillColor(Color::Blue);
-            body.setOutlineThickness(5.f);
-            body.setOutlineColor(Color::Cyan);
-            body.setOrigin({size,size});
-            body.setPosition(toaDo);
-        }
-
-        void draw(RenderWindow &window){
-            window.draw(body);
-        }
-
-        void move(){
-            toaDo+=speed;
-            body.setPosition(toaDo);
-        }
-        friend void nhanVatDiChuyen(Body &body, RenderWindow &window);
-        
+    Obj(float x, float y):position({x,y}),velocity({0,0}){
+        hp=maxhp=100;
+        hp_regen=1;
+        body_dmg=2;
+    }
+    void update(){
+        position+=velocity;
+        if(hp<maxhp)
+            hp+=hp_regen;
+        if(hp>maxhp)
+            hp=maxhp;
+    }
+    float Getx(){
+        return position.x;
+    }
+    float Gety(){
+        return position.y;
+    }
 };
-
-class Cannon{
-    private:
-        float dmg, range, bullet_speed; // stats
-        float angle; // góc bắn
-        Vector2f toaDo;
-
-        RectangleShape gun;
-    public:
-        Cannon(Body &body) 
-            : dmg(10), range(200), bullet_speed(20), angle(0), toaDo(body.toaDo){
-            float rong = body.size*0.5, dai = body.size*2;
-            gun.setSize({dai, rong});
-            gun.setOrigin({0, rong/2});
-            gun.setFillColor(Color(153,153,153));
-            gun.setOutlineThickness(5.f);
-            gun.setOutlineColor(Color(102,102,102));
-            gun.setPosition(toaDo);
-        }
-
-        void move(Vector2f pos){
-            toaDo = pos;
-            gun.setPosition(toaDo);
-        }
-
-        void draw(RenderWindow &window){
-            window.draw(gun);
-        }
-
-        void setRotation(float newAngle){
-            angle = newAngle;
-            gun.setRotation(degrees(angle));
-        }
-};
-
-void nhanVatDiChuyen(Body &body, RenderWindow &window){
-    Vector2f tangToc(0, 0);
-    float maSat = 0.9;
-    if (Keyboard::isKeyPressed(Keyboard::Key::W)) tangToc.y -= body.acc;
-    if (Keyboard::isKeyPressed(Keyboard::Key::S)) tangToc.y += body.acc;
-    if (Keyboard::isKeyPressed(Keyboard::Key::A)) tangToc.x -= body.acc;
-    if (Keyboard::isKeyPressed(Keyboard::Key::D)) tangToc.x += body.acc;
-    // cập nhật vận tốc
-    body.speed += tangToc;
-    float speedLen = sqrt(body.speed.x*body.speed.x + body.speed.y*body.speed.y);
-    body.speed *= maSat;
-    // loại bỏ vận tốc rất nhỏ tranh rung lắc
-    if (abs(body.speed.x) < 0.1) body.speed.x = 0;
-    if (abs(body.speed.y) < 0.1) body.speed.y = 0;
-    body.move();
-    body.draw(window);
-}
-void updateCannon(Cannon &gun, Body &body, RenderWindow &window){
-    // cập nhật góc quay súng
-    Vector2i mousePos = Mouse::getPosition(window);
-    int dx=mousePos.x - body.toaDo.x;
-    int dy=mousePos.y - body.toaDo.y;
-    int newAngle = atan2(dy,dx)*180/3.14;
-    if(newAngle<0) newAngle+=360;
-
-    gun.setRotation(newAngle);
-    gun.move(body.toaDo);
-    gun.draw(window);
-}
-int main() {
-    unsigned int WIDTH = 800, HEIGHT = 600;
-    ContextSettings settings;
-    settings.attributeFlags=8;
-    RenderWindow window(VideoMode({WIDTH, HEIGHT}), "Diep",Style::Default, State::Windowed, settings);
-    window.setFramerateLimit(60);
     
+class Cannon{
+public:
+    int delay;
+    float angle;
+    sf::Vector2f position;
+    sf::RectangleShape gun;
+
+    Cannon(float x, float y,float size):position({x,y}),angle(0),delay(0){
+        gun.setSize({size*2, size*2/3});
+        gun.setFillColor(sf::Color(153,153,153));
+        gun.setOutlineThickness(5.f);
+        gun.setOutlineColor(sf::Color(102,102,102));
+        gun.setOrigin({0,size/3});
+        gun.setPosition({x,y});
+    }
+    void update(sf::Vector2f pos, int angle){
+        position=pos;
+        gun.setPosition(pos);
+        gun.setRotation(sf::degrees(angle));
+    }
+    void DrawGun(sf::RenderWindow &window){
+        window.draw(gun);
+    }   
+};
+class MyTank{
+public:
+    Obj body;
+    Cannon gun;
+    float velocity_max;
+    float dpos;
+    float friction;
+    sf::CircleShape bodyShape;
+
+    MyTank(float x, float y, float size):body(x,y),gun(x,y,size){
+        bodyShape.setRadius(size);
+        bodyShape.setFillColor(sf::Color(0,178,225));
+        bodyShape.setOutlineThickness(5.f);
+        bodyShape.setOutlineColor(sf::Color(14, 144, 178));
+        bodyShape.setOrigin({size,size});
+        bodyShape.setPosition({x,y});
+        body.position={x,y};
+        body.velocity={0,0};
+        velocity_max=6;
+        friction=0.9;
+    }
+    void update(int angle){
+        // hàm clamp giới hạn tốc độ
+        // hàm hypot(x,y) = sqrt(x*x+y*y)
+        body.velocity*=friction;
+        body.velocity.x=std::clamp(body.velocity.x,-velocity_max,velocity_max);
+        body.velocity.y=std::clamp(body.velocity.y,-velocity_max,velocity_max);
+        dpos=std::hypot(body.velocity.x,body.velocity.y);
+        if(dpos>velocity_max){
+            body.velocity.x=body.velocity.x/dpos*velocity_max;
+            body.velocity.y=body.velocity.y/dpos*velocity_max;
+        }
+        if(body.velocity.x<0.1 && body.velocity.x>-0.1)
+            body.velocity.x=0;
+        if(body.velocity.y<0.1 && body.velocity.y>-0.1)
+            body.velocity.y=0;
+        body.update();
+
+        gun.update(body.position,angle);
+        bodyShape.setPosition(body.position);
+    }
+    void Drawtank(sf::RenderWindow &window){
+        gun.DrawGun(window);
+        window.draw(bodyShape);
+    }
+    void moveX(float dx){
+        body.velocity.x+=dx;
+    }
+    void moveY(float dy){
+        body.velocity.y+=dy;
+    }
+};
+
+int main(){
+    int WIDTH = 600; // dài 
+    int HEIGHT = 600; // rộng
+    float acceleration = 0.6; // gia tốc
+    int x=WIDTH/2,y=HEIGHT/2;
+    float bodysize=36;
+
+    sf::ContextSettings settings;
+    settings.antiAliasingLevel=4;
+    bool fullscreen=false;
+    sf::RenderWindow window(sf::VideoMode({WIDTH, HEIGHT}), "Diep",sf::Style::Default, sf::State::Windowed, settings);
+    window.setFramerateLimit(30);
+
+    MyTank mytank(x,y,bodysize);
+
+    // tải font chữ
     sf::Font font;
     if(!font.openFromFile("arial.ttf"))
         return -1;
     sf::Text text(font);
     text.setCharacterSize(14);
-    text.setFillColor(Color::Red);
+    text.setFillColor(sf::Color::Red);
 
-    Body body(WIDTH/2, HEIGHT/2, 75);
-    Cannon gun(body);
-
+    int angle=1;
 
     while(window.isOpen()){
-        while(auto event = window.pollEvent()){
-            if(event->is<Event::Closed>()){
+        while (const std::optional event = window.pollEvent()){
+            if (event->is<sf::Event::Closed>()){
                 window.close();
             }
+            else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()){
+                if (keyPressed->scancode == sf::Keyboard::Scancode::Escape)
+                    window.close();
+            }
         }
-        window.clear(Color(204, 204, 204));
+        // di chuyển 
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)){
+            mytank.moveY(-acceleration);
+        }
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)){
+            mytank.moveY(acceleration);
+        }
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)){
+            mytank.moveX(-acceleration);
+        }
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)){
+            mytank.moveX(acceleration);
+        }
 
-        updateCannon(gun, body, window);
-        nhanVatDiChuyen(body, window);
-                   
+        // tính góc nòng súng
+        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+        int dx=mousePos.x-mytank.body.Getx(), dy=mousePos.y-mytank.body.Gety();
+        angle=atan2(dy,dx)*180/3.14;
+
+        //std::stringstream ss;
+        //ss << mytank.body.position.x <<" "<<mytank.body.position.y<<" "<<angle << ' '<< mytank.body.velocity.x << ' ' << mytank.body.velocity.y;
+        //text.setString(ss.str());
+
+        window.clear(sf::Color(204, 204, 204));
+        mytank.update(angle);
+        window.draw(text);
+        mytank.Drawtank(window);
         window.display();
     }
 
