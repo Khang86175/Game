@@ -106,12 +106,47 @@ public:
         body.velocity.y+=dy;
     }
 };
+class Map{
+    private:
+        sf::RectangleShape background;
+        sf::VertexArray grid;
+        float width, height;
+    public:
+        Map(float w, float h)
+         : width(w), height(h), grid(sf::PrimitiveType::Lines){
+            background.setSize({w, h});
+            background.setFillColor(sf::Color(204, 204, 204));
+            background.setOutlineColor(sf::Color(230,230,230));
+            background.setOutlineThickness(5.f);
+            background.setPosition({0, 0});
+            background.setOrigin({w/2, h/2});
+
+            float cellW = width / 100; // chiều rộng của 1 ô
+            float cellH = height / 100;  // chiều dài của 1 ô
+            for (float i = - width/2; i <= width/2; i += cellW){
+                sf::Vertex vertex1{{i, - height/2}, sf::Color(230,230,230)};
+                sf::Vertex vertex2{{i, height/2}, sf::Color(230,230,230)};
+                grid.append(vertex1);
+                grid.append(vertex2);
+            }
+            for (float i = - height/2; i <= height/2; i += cellH){
+                sf::Vertex vertex1{{- width/2, i}, sf::Color(230,230,230)};
+                sf::Vertex vertex2{{width/2, i}, sf::Color(230,230,230)};
+                grid.append(vertex1);
+                grid.append(vertex2);
+            }
+        }
+        void DrawBackground(sf::RenderWindow &window){
+            window.draw(background);
+            window.draw(grid);
+        }           
+};
 
 int main(){
-    int WIDTH = 600; // dài 
-    int HEIGHT = 600; // rộng
+    constexpr unsigned int WIDTH = 800; // dài 
+    constexpr unsigned int HEIGHT = 600; // rộng
     float acceleration = 0.6; // gia tốc
-    int x=WIDTH/2,y=HEIGHT/2;
+    // int x=WIDTH/2,y=HEIGHT/2;
     float bodysize=36;
 
     sf::ContextSettings settings;
@@ -120,7 +155,8 @@ int main(){
     sf::RenderWindow window(sf::VideoMode({WIDTH, HEIGHT}), "Diep",sf::Style::Default, sf::State::Windowed, settings);
     window.setFramerateLimit(30);
 
-    MyTank mytank(x,y,bodysize);
+    MyTank mytank(0,0,bodysize); // map keo dai tu -1000 den 1000
+    Map map(2000, 2000);
 
     // tải font chữ
     sf::Font font;
@@ -132,6 +168,9 @@ int main(){
 
     int angle=1;
 
+    sf::View view;
+    view.setSize({WIDTH, HEIGHT});
+    
     while(window.isOpen()){
         while (const std::optional event = window.pollEvent()){
             if (event->is<sf::Event::Closed>()){
@@ -157,18 +196,21 @@ int main(){
         }
 
         // tính góc nòng súng
-        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+        sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window), view);
         int dx=mousePos.x-mytank.body.Getx(), dy=mousePos.y-mytank.body.Gety();
         angle=atan2(dy,dx)*180/3.14;
 
-        //std::stringstream ss;
-        //ss << mytank.body.position.x <<" "<<mytank.body.position.y<<" "<<angle << ' '<< mytank.body.velocity.x << ' ' << mytank.body.velocity.y;
-        //text.setString(ss.str());
+        std::stringstream ss;
+        ss << mytank.body.position.x <<" "<<mytank.body.position.y<<" "<<angle << ' '<< mytank.body.velocity.x << ' ' << mytank.body.velocity.y;
+        text.setString(ss.str());
 
         window.clear(sf::Color(204, 204, 204));
+        map.DrawBackground(window);
         mytank.update(angle);
+        view.setCenter(mytank.body.position);
         window.draw(text);
         mytank.Drawtank(window);
+        window.setView(view);
         window.display();
     }
 
