@@ -13,23 +13,23 @@ class Map{
         Map(float w, float h)
          : width(w), height(h), grid(sf::PrimitiveType::Lines){
             background.setSize({w, h});
-            background.setFillColor(sf::Color(204, 204, 204));
-            // background.setOutlineColor(sf::Color(230,230,230));
-            // background.setOutlineThickness(5.f);
+            background.setFillColor(sf::Color(230, 230, 230));
+            background.setOutlineColor(sf::Color(204, 204, 204));
+            background.setOutlineThickness(5.f);
             background.setPosition({0, 0});
             background.setOrigin({w/2, h/2});
 
             float cellW = width / 100; // chiều rộng của 1 ô
             float cellH = height / 100;  // chiều dài của 1 ô
-            for (float i = - width/2; i <= width/2; i += cellW){
-                sf::Vertex vertex1{{i, - height/2}, sf::Color(230,230,230)};
-                sf::Vertex vertex2{{i, height/2}, sf::Color(230,230,230)};
+            for (float i = - width; i <= width; i += cellW){
+                sf::Vertex vertex1{{i, - height}, sf::Color(204, 204, 204)};
+                sf::Vertex vertex2{{i , height}, sf::Color(204, 204, 204)};
                 grid.append(vertex1);
                 grid.append(vertex2);
             }
-            for (float i = - height/2; i <= height/2; i += cellH){
-                sf::Vertex vertex1{{- width/2, i}, sf::Color(230,230,230)};
-                sf::Vertex vertex2{{width/2, i}, sf::Color(230,230,230)};
+            for (float i = - height; i <= height; i += cellH){
+                sf::Vertex vertex1{{- width, i}, sf::Color(204, 204, 204)};
+                sf::Vertex vertex2{{width, i}, sf::Color(204, 204, 204)};
                 grid.append(vertex1);
                 grid.append(vertex2);
             }
@@ -44,7 +44,7 @@ class Map{
         float getHeight(){
             return height;
         }
-}; 
+};
 class Obj{
 public:
     sf::Vector2f position;
@@ -151,18 +151,30 @@ public:
         body.velocity.y+=dy;
     }
 };
+class MiniMap{
+    private:
+        sf::View minimap;
+        sf::RectangleShape minimapBG;
+        float width, height;
+    public:
+        MiniMap(float width, float height) : width(width), height(height){
+            minimapBG.setSize({width*2, height*2});
+            minimapBG.setFillColor(sf::Color::Red);
+            minimapBG.setPosition({0, 0});
+            minimapBG.setOrigin({width, height});
 
-void setViewCenter(Map map, MyTank mytank, float view_width, float view_height, sf::View &view){
-    float min_x = -map.getWidth()/2 + view_width/2;
-    float max_x = map.getWidth()/2 - view_width/2;
-    float min_y = -map.getHeight()/2 + view_height/2;
-    float max_y = map.getHeight()/2 - view_height/2;
+            minimap.setSize({width, height});
+            minimap.setViewport(sf::FloatRect(sf::Vector2f(0.75, 0.75), sf::Vector2f(0.25, 0.25)));
+        }
+        void drawBackground(sf::RenderWindow &window){
 
-    float center_x = std::clamp(mytank.body.Getx(), min_x, max_x);
-    float center_y = std::clamp(mytank.body.Gety(), min_y, max_y);
-    
-    view.setCenter({center_x, center_y});
-}
+            window.draw(minimapBG);
+        }
+        void view(sf::RenderWindow &window, MyTank &mytank){
+            window.setView(minimap);
+            minimap.setCenter(mytank.body.position);
+        }
+};
 
 int main(){
     constexpr unsigned int WIDTH = 800; // dài 
@@ -182,9 +194,12 @@ int main(){
     sf::View view;
     view.setSize({view_width, view_height});
 
+    float map_width = 2000;
+    float map_height = 2000;
+    Map map(map_width, map_height);
+    MiniMap minimap(map_width, map_height);
     MyTank mytank(0,0,bodysize); // map keo dai tu -1000 den 1000
-    Map map(2000, 2000);
-
+    
     // tải font chữ
     sf::Font font;
     if(!font.openFromFile("arial.ttf"))
@@ -227,14 +242,21 @@ int main(){
         // std::stringstream ss;
         // ss << mytank.body.position.x <<" "<<mytank.body.position.y<<" "<<angle << ' '<< mytank.body.velocity.x << ' ' << mytank.body.velocity.y;
         // text.setString(ss.str());
-
-        window.clear(sf::Color(204, 204, 204));
-        map.DrawBackground(window);
+        window.clear(sf::Color(230,230,230));
+        // CẬP NHẬT
         mytank.update(angle, map);
-        setViewCenter(map, mytank, view_width, view_height, view);
-        window.draw(text);
-        mytank.Drawtank(window);
+        view.setCenter(mytank.body.position);
+        // VẼ SCENE CHÍNH
         window.setView(view);
+        map.DrawBackground(window);
+        mytank.Drawtank(window);
+        window.draw(text);
+        // VẼ MINIMAP
+        minimap.drawBackground(window);
+        minimap.view(window, mytank);
+        map.DrawBackground(window); // vẽ lại 
+        mytank.Drawtank(window);   
+
         window.display();
     }
 
