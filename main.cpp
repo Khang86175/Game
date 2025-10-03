@@ -4,6 +4,47 @@
 #include <algorithm>
 #include <iostream>
 
+class Map{
+    private:
+        sf::RectangleShape background;
+        sf::VertexArray grid;
+        float width, height;
+    public:
+        Map(float w, float h)
+         : width(w), height(h), grid(sf::PrimitiveType::Lines){
+            background.setSize({w, h});
+            background.setFillColor(sf::Color(204, 204, 204));
+            // background.setOutlineColor(sf::Color(230,230,230));
+            // background.setOutlineThickness(5.f);
+            background.setPosition({0, 0});
+            background.setOrigin({w/2, h/2});
+
+            float cellW = width / 100; // chiều rộng của 1 ô
+            float cellH = height / 100;  // chiều dài của 1 ô
+            for (float i = - width/2; i <= width/2; i += cellW){
+                sf::Vertex vertex1{{i, - height/2}, sf::Color(230,230,230)};
+                sf::Vertex vertex2{{i, height/2}, sf::Color(230,230,230)};
+                grid.append(vertex1);
+                grid.append(vertex2);
+            }
+            for (float i = - height/2; i <= height/2; i += cellH){
+                sf::Vertex vertex1{{- width/2, i}, sf::Color(230,230,230)};
+                sf::Vertex vertex2{{width/2, i}, sf::Color(230,230,230)};
+                grid.append(vertex1);
+                grid.append(vertex2);
+            }
+        }
+        void DrawBackground(sf::RenderWindow &window){
+            window.draw(background);
+            window.draw(grid);
+        }
+        float getWidth(){
+            return width;
+        }
+        float getHeight(){
+            return height;
+        }
+}; 
 class Obj{
 public:
     sf::Vector2f position;
@@ -75,7 +116,7 @@ public:
         velocity_max=6;
         friction=0.9;
     }
-    void update(int angle){
+    void update(int angle, Map &map){
         // hàm clamp giới hạn tốc độ
         // hàm hypot(x,y) = sqrt(x*x+y*y)
         body.velocity*=friction;
@@ -91,6 +132,10 @@ public:
         if(body.velocity.y<0.1 && body.velocity.y>-0.1)
             body.velocity.y=0;
         body.update();
+        // giới hạn di chuyển trong map
+        float r = bodyShape.getRadius();
+        body.position.x = std::clamp(body.position.x, -map.getWidth()/2 + r, map.getWidth()/2 - r);
+        body.position.y = std::clamp(body.position.y, -map.getHeight()/2 + r, map.getHeight()/2 - r);
 
         gun.update(body.position,angle);
         bodyShape.setPosition(body.position);
@@ -106,41 +151,18 @@ public:
         body.velocity.y+=dy;
     }
 };
-class Map{
-    private:
-        sf::RectangleShape background;
-        sf::VertexArray grid;
-        float width, height;
-    public:
-        Map(float w, float h)
-         : width(w), height(h), grid(sf::PrimitiveType::Lines){
-            background.setSize({w, h});
-            background.setFillColor(sf::Color(204, 204, 204));
-            background.setOutlineColor(sf::Color(230,230,230));
-            background.setOutlineThickness(5.f);
-            background.setPosition({0, 0});
-            background.setOrigin({w/2, h/2});
 
-            float cellW = width / 100; // chiều rộng của 1 ô
-            float cellH = height / 100;  // chiều dài của 1 ô
-            for (float i = - width/2; i <= width/2; i += cellW){
-                sf::Vertex vertex1{{i, - height/2}, sf::Color(230,230,230)};
-                sf::Vertex vertex2{{i, height/2}, sf::Color(230,230,230)};
-                grid.append(vertex1);
-                grid.append(vertex2);
-            }
-            for (float i = - height/2; i <= height/2; i += cellH){
-                sf::Vertex vertex1{{- width/2, i}, sf::Color(230,230,230)};
-                sf::Vertex vertex2{{width/2, i}, sf::Color(230,230,230)};
-                grid.append(vertex1);
-                grid.append(vertex2);
-            }
-        }
-        void DrawBackground(sf::RenderWindow &window){
-            window.draw(background);
-            window.draw(grid);
-        }           
-};
+void setViewCenter(Map map, MyTank mytank, float view_width, float view_height, sf::View &view){
+    float min_x = -map.getWidth()/2 + view_width/2;
+    float max_x = map.getWidth()/2 - view_width/2;
+    float min_y = -map.getHeight()/2 + view_height/2;
+    float max_y = map.getHeight()/2 - view_height/2;
+
+    float center_x = std::clamp(mytank.body.Getx(), min_x, max_x);
+    float center_y = std::clamp(mytank.body.Gety(), min_y, max_y);
+    
+    view.setCenter({center_x, center_y});
+}
 
 int main(){
     constexpr unsigned int WIDTH = 800; // dài 
@@ -155,6 +177,11 @@ int main(){
     sf::RenderWindow window(sf::VideoMode({WIDTH, HEIGHT}), "Diep",sf::Style::Default, sf::State::Windowed, settings);
     window.setFramerateLimit(30);
 
+    float view_width = WIDTH;
+    float view_height = HEIGHT;
+    sf::View view;
+    view.setSize({view_width, view_height});
+
     MyTank mytank(0,0,bodysize); // map keo dai tu -1000 den 1000
     Map map(2000, 2000);
 
@@ -168,9 +195,6 @@ int main(){
 
     int angle=1;
 
-    sf::View view;
-    view.setSize({WIDTH, HEIGHT});
-    
     while(window.isOpen()){
         while (const std::optional event = window.pollEvent()){
             if (event->is<sf::Event::Closed>()){
@@ -200,14 +224,14 @@ int main(){
         int dx=mousePos.x-mytank.body.Getx(), dy=mousePos.y-mytank.body.Gety();
         angle=atan2(dy,dx)*180/3.14;
 
-        std::stringstream ss;
-        ss << mytank.body.position.x <<" "<<mytank.body.position.y<<" "<<angle << ' '<< mytank.body.velocity.x << ' ' << mytank.body.velocity.y;
-        text.setString(ss.str());
+        // std::stringstream ss;
+        // ss << mytank.body.position.x <<" "<<mytank.body.position.y<<" "<<angle << ' '<< mytank.body.velocity.x << ' ' << mytank.body.velocity.y;
+        // text.setString(ss.str());
 
         window.clear(sf::Color(204, 204, 204));
         map.DrawBackground(window);
-        mytank.update(angle);
-        view.setCenter(mytank.body.position);
+        mytank.update(angle, map);
+        setViewCenter(map, mytank, view_width, view_height, view);
         window.draw(text);
         mytank.Drawtank(window);
         window.setView(view);
