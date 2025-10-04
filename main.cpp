@@ -19,8 +19,8 @@ class Map{
             background.setPosition({0, 0});
             background.setOrigin({w/2, h/2});
 
-            float cellW = width / 100; // chiều rộng của 1 ô
-            float cellH = height / 100;  // chiều dài của 1 ô
+            float cellW = width / 200; // chiều rộng của 1 ô
+            float cellH = height / 200;  // chiều dài của 1 ô
             for (float i = - width; i <= width; i += cellW){
                 sf::Vertex vertex1{{i, - height}, sf::Color(204, 204, 204)};
                 sf::Vertex vertex2{{i , height}, sf::Color(204, 204, 204)};
@@ -154,25 +154,33 @@ public:
 class MiniMap{
     private:
         sf::View minimap;
-        sf::RectangleShape minimapBG;
-        float width, height;
+        sf::RectangleShape minimapBG; // background
+        sf::RectangleShape border;
     public:
-        MiniMap(float width, float height) : width(width), height(height){
+        MiniMap(float width, float height, sf::RenderWindow &window){
+            minimap.setSize({1500, 1500});
+            minimap.setViewport(sf::FloatRect(sf::Vector2f(0.75, 0.75), sf::Vector2f(0.25, 0.25)));
+
             minimapBG.setSize({width*2, height*2});
-            minimapBG.setFillColor(sf::Color::Red);
+            minimapBG.setFillColor(sf::Color(50,50,180));
             minimapBG.setPosition({0, 0});
             minimapBG.setOrigin({width, height});
 
-            minimap.setSize({width, height});
-            minimap.setViewport(sf::FloatRect(sf::Vector2f(0.75, 0.75), sf::Vector2f(0.25, 0.25)));
+            border.setSize({window.getSize().x * 0.25f, window.getSize().y * 0.25f}); // đúng tỉ lệ viewport
+            border.setPosition({window.getSize().x * 0.75f, window.getSize().y * 0.75f}); // góc dưới phải
+            border.setFillColor(sf::Color::Transparent);
+            border.setOutlineColor(sf::Color(55, 55, 55, 195));
+            border.setOutlineThickness(7.f);
         }
-        void drawBackground(sf::RenderWindow &window){
-
-            window.draw(minimapBG);
-        }
-        void view(sf::RenderWindow &window, MyTank &mytank){
-            window.setView(minimap);
+        void drawMinimap(sf::RenderWindow &window, MyTank &mytank, Map &map){
             minimap.setCenter(mytank.body.position);
+            window.setView(minimap);
+            window.draw(minimapBG);
+            map.DrawBackground(window); // vẽ lại 
+            mytank.Drawtank(window); 
+            window.setView(window.getDefaultView());
+            window.draw(border);
+            
         }
 };
 
@@ -191,13 +199,13 @@ int main(){
 
     float view_width = WIDTH;
     float view_height = HEIGHT;
-    sf::View view;
-    view.setSize({view_width, view_height});
+    sf::View mainView;
+    mainView.setSize({view_width, view_height});
 
-    float map_width = 2000;
-    float map_height = 2000;
+    float map_width = 5000;
+    float map_height = 5000;
     Map map(map_width, map_height);
-    MiniMap minimap(map_width, map_height);
+    MiniMap minimap(map_width, map_height, window);
     MyTank mytank(0,0,bodysize); // map keo dai tu -1000 den 1000
     
     // tải font chữ
@@ -235,27 +243,24 @@ int main(){
         }
 
         // tính góc nòng súng
-        sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window), view);
+        sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window), mainView);
         int dx=mousePos.x-mytank.body.Getx(), dy=mousePos.y-mytank.body.Gety();
         angle=atan2(dy,dx)*180/3.14;
 
         // std::stringstream ss;
         // ss << mytank.body.position.x <<" "<<mytank.body.position.y<<" "<<angle << ' '<< mytank.body.velocity.x << ' ' << mytank.body.velocity.y;
         // text.setString(ss.str());
-        window.clear(sf::Color(230,230,230));
+
+        window.clear(sf::Color(220,220,220));
         // CẬP NHẬT
         mytank.update(angle, map);
-        view.setCenter(mytank.body.position);
+        mainView.setCenter(mytank.body.position);
         // VẼ SCENE CHÍNH
-        window.setView(view);
+        window.setView(mainView);
         map.DrawBackground(window);
         mytank.Drawtank(window);
         window.draw(text);
-        // VẼ MINIMAP
-        minimap.drawBackground(window);
-        minimap.view(window, mytank);
-        map.DrawBackground(window); // vẽ lại 
-        mytank.Drawtank(window);   
+        minimap.drawMinimap(window, mytank, map);
 
         window.display();
     }
