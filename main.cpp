@@ -59,6 +59,8 @@ public:
         gun.setPosition({x,y});
     }
     void update(sf::Vector2f pos, int angle){
+        if(delay>0)
+            delay-=1;
         position=pos;
         gun.setPosition(pos);
         gun.setRotation(sf::degrees(angle));
@@ -184,7 +186,40 @@ public:
     }
 
     void DrawObs(sf::RenderWindow &window){
-        shape.setPosition(body.position);
+        //shape.setPosition(body.position);
+        window.draw(shape);
+    }
+};
+class Bullet{
+public:
+    Obj body;
+    sf::CircleShape shape;
+    int timetodie;
+    bool alive;
+    Bullet(sf::Vector2f pos, float angle,float size,float speed,int timetodie):body(pos.x,pos.y,2000,size),timetodie(timetodie),alive(true){
+        shape.setRadius(size);
+        shape.setFillColor(sf::Color(0,178,225));
+        shape.setOutlineThickness(3.f);
+        shape.setOutlineColor(sf::Color(14, 144, 178));
+        shape.setOrigin({size,size});
+        shape.setPosition(pos);
+        body.velocity.x=speed * cos(angle*3.14/180);
+        body.velocity.y=speed * sin(angle*3.14/180);
+    }
+    //void newbullet(float x,float y,float angle,float size,float speed,int timetodie){
+//
+    //}
+    void update(){
+        if(timetodie==0)
+            alive=false;
+        if(alive){
+            timetodie-=1;
+            body.update();
+            shape.setPosition(body.position);
+        }
+        
+    }
+    void draw(sf::RenderWindow &window){
         window.draw(shape);
     }
 };
@@ -210,6 +245,7 @@ int main(){
 
     Line line(map_width,map_height);
     std::vector<Obstacle> obs;
+    std::vector<Bullet> testing;
     for(int i=0;i<100;i++){
         int type=rand()%3+3;
         obs.push_back(Obstacle(rand()%(int)(map_width*2)-map_width,rand()%(int)(map_height*2)-map_height,type*10,map_width,type));
@@ -246,12 +282,16 @@ int main(){
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)){
             mytank.moveX(acceleration);
         }
+        
 
         // tính góc nòng súng
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
         int dx=mousePos.x-window.getSize().x/2, dy=mousePos.y-window.getSize().y/2;
         angle=atan2(dy,dx)*180/3.14;
-
+        if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && mytank.gun.delay==0){
+            testing.push_back(Bullet(mytank.body.position,angle,10,8,150));
+            mytank.gun.delay=30;
+        }
         std::stringstream ss;
 
         mytank.update(angle);
@@ -264,10 +304,15 @@ int main(){
         
         line.draw(window);
         
-
-        mytank.Drawtank(window);
+        for(int i=0;i<testing.size();i++){
+            testing[i].update();
+            if(testing[i].alive==true)
+                testing[i].draw(window);
+        }
+        
         for(int i=0;i<100;i++)
             obs[i].DrawObs(window);
+        mytank.Drawtank(window);
 
         window.setView(window.getDefaultView());
         minimap.Drawmap(window,mytank.body.position);
