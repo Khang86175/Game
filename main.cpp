@@ -77,8 +77,10 @@ public:
     //float dpos;
     float friction;
     sf::CircleShape bodyShape;
+    int score;
+    int level;
 
-    MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size),gun(x,y,size){
+    MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size),gun(x,y,size),score(0),level(1){
         bodyShape.setRadius(size);
         bodyShape.setFillColor(sf::Color(0,178,225));
         bodyShape.setOutlineThickness(5.f);
