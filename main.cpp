@@ -13,11 +13,8 @@ public:
     float hitbox_r;
     float hp,maxhp,hp_regen,body_dmg;
 
-    Obj(float x, float y,float mapsize,float size):position({x,y}),velocity({0,0}),mapsize(mapsize),hitbox_r(size){
-        hp=maxhp=100;
-        hp_regen=1;
-        body_dmg=2;
-    }
+    Obj(float x, float y, float mapsize, float size, float maxhp, float hp_regen, float body_dmg)
+        : position({x, y}), velocity({0, 0}), mapsize(mapsize), hitbox_r(size), maxhp(maxhp), hp(maxhp), hp_regen(hp_regen), body_dmg(body_dmg) {}
     void update(){
         position+=velocity;
         position.x=std::clamp(position.x,-mapsize+hitbox_r,mapsize-hitbox_r);
@@ -45,12 +42,12 @@ float CheckCollision(const Obj &a,const Obj &b){
 }
 class Cannon{
 public:
-    int delay;
+    int delay, recoil;
     float angle;
     sf::Vector2f position;
     sf::RectangleShape gun;
 
-    Cannon(float x, float y,float size):position({x,y}),angle(0),delay(0){
+    Cannon(float x, float y,float size, float recoil):position({x,y}),angle(0),delay(0), recoil(recoil){
         gun.setSize({size*2, size*2/3});
         gun.setFillColor(sf::Color(153,153,153));
         gun.setOutlineThickness(5.f);
@@ -69,18 +66,113 @@ public:
         window.draw(gun);
     }   
 };
+class Bullet{
+public:
+    Obj body;
+    sf::CircleShape shape;
+    int timetodie;
+    bool alive;
+    Bullet(sf::Vector2f pos, float angle,float size,float speed,int timetodie):body(pos.x,pos.y,2000,size, 10, 0, 10),timetodie(timetodie),alive(true){
+        shape.setRadius(size);
+        shape.setFillColor(sf::Color(0,178,225));
+        shape.setOutlineThickness(3.f);
+        shape.setOutlineColor(sf::Color(14, 144, 178));
+        shape.setOrigin({size,size});
+        shape.setPosition(pos);
+        body.velocity.x=speed * cos(angle*3.14/180);
+        body.velocity.y=speed * sin(angle*3.14/180);
+        float gunLength = 36*2;
+        body.position.x = pos.x + gunLength * cos(angle * 3.14f / 180.f);
+        body.position.y = pos.y + gunLength * sin(angle * 3.14f / 180.f);
+    }
+    //void newbullet(float x,float y,float angle,float size,float speed,int timetodie){
+//
+    //}
+    void update(){
+        
+        if(timetodie==0)
+            alive=false;
+        if(alive){            
+            timetodie-=1;
+            body.update();
+            shape.setPosition(body.position);
+        }
+        
+    }
+    void draw(sf::RenderWindow &window){
+        window.draw(shape);
+    }
+};
+class TankBasic{
+public:
+    Cannon gun;
+
+    TankBasic(float x, float y, float size) : gun(x,y,size, 30){}
+    void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape){
+        gun.DrawGun(window);
+        window.draw(bodyShape);
+    }
+    void update(sf::Vector2f pos, int angle){
+        gun.update(pos, angle);
+    }
+    void shoot(std::vector<Bullet> &bullets, int angle){
+        if (gun.delay == 0){
+            bullets.push_back(Bullet(gun.position,angle,10,8,150));
+            gun.delay = gun.recoil;
+        }
+    }
+};
+class TankTwin{
+public:
+    Cannon gun1, gun2;
+    int gunToggle; // 0:gun1 , 1:gun2
+    int gunOffSet; // Kc giữa 2 nòng
+
+    TankTwin(float x, float y, float size): gun1(x, y, size, 30), gun2(x, y, size, 30), gunToggle(0), gunOffSet(20) {}
+    void update(sf::Vector2f pos, float angle){
+        float offSetX = gunOffSet * cos((angle + 90) * 3.14f / 180.f);
+        float offsetY = gunOffSet * sin((angle + 90) * 3.14f / 180.f);
+        sf::Vector2f posGun1(pos.x - offSetX, pos.y - offsetY);
+        sf::Vector2f posGun2(pos.x + offSetX, pos.y + offsetY);
+        gun1.update(posGun1, angle);
+        gun2.update(posGun2, angle);
+    }
+    void shoot(std::vector<Bullet> &bullets, int angle){
+        if (gunToggle == 0 && gun1.delay == 0){
+            bullets.push_back(Bullet(gun1.position,angle,10,8,150));
+            gun1.delay = gun1.recoil/2;
+            gunToggle = 1;
+        }
+        if (gunToggle == 1 && gun2.delay == 0){
+            bullets.push_back(Bullet(gun2.position,angle,10,8,150));
+            gun2.delay = gun2.recoil/2;
+            gunToggle = 0;
+        }
+    }
+    void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape){
+        gun1.DrawGun(window);
+        gun2.DrawGun(window);
+        window.draw(bodyShape);
+    }
+};
 class MyTank{
 public:
     Obj body;
-    Cannon gun;
+    // Cannon gun;
     float velocity_max;
     //float dpos;
     float friction;
     sf::CircleShape bodyShape;
+    int xp, xp_to_lv_up;
     int score;
     int level;
 
-    MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size),gun(x,y,size),score(0),level(1){
+    int tankType; // 0:basic, 1:twin
+    TankBasic *tankBasic;
+    TankTwin *tankTwin;
+    float size;
+
+    MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size,100, 0.2f, 2),score(0),level(6), xp(0), xp_to_lv_up(100), tankType(0), size(size), tankTwin(nullptr){
         bodyShape.setRadius(size);
         bodyShape.setFillColor(sf::Color(0,178,225));
         bodyShape.setOutlineThickness(5.f);
@@ -91,6 +183,11 @@ public:
         body.velocity={0,0};
         velocity_max=6;
         friction=0.9;
+        tankBasic = new TankBasic(x, y, size);
+    }
+    ~MyTank(){
+        if (tankBasic) delete tankBasic;
+        if (tankTwin) delete tankTwin;
     }
     void update(int angle){
         // hàm clamp giới hạn tốc độ
@@ -109,18 +206,65 @@ public:
             body.velocity.y=0;
         body.update();
 
-        gun.update(body.position,angle);
+        if (tankType == 0){
+            tankBasic->update(body.position, angle);
+        }
+        else if (tankType == 1){
+            tankTwin->update(body.position, angle);
+        }
         bodyShape.setPosition(body.position);
     }
+    void addScore_XP(int point){
+        score += point;
+        xp += point;
+    }
+    void levelUp(){
+        if (xp >= xp_to_lv_up){
+            level += 1;
+            xp -= xp_to_lv_up;
+            xp_to_lv_up = level*100;
+
+            body.maxhp += 20;
+            body.hp = body.maxhp;
+            body.hp_regen += 0.05;
+            body.body_dmg += 1;
+            velocity_max += 0.2;
+
+            bodyShape.setRadius(bodyShape.getRadius() + 1);
+            bodyShape.setOrigin({bodyShape.getRadius(), bodyShape.getRadius()});
+            body.hitbox_r = bodyShape.getRadius();
+        }
+        if (level >= 5 && tankType == 0){
+            delete tankBasic;
+            tankBasic = nullptr;
+            tankTwin = new TankTwin(body.position.x, body.position.y, size);
+            tankType = 1;
+        }
+    }
     void Drawtank(sf::RenderWindow &window){
-        gun.DrawGun(window);
-        window.draw(bodyShape);
+        if (tankType == 0){
+            tankBasic->drawTank(window, bodyShape);
+        }
+        else if (tankType == 1){
+            tankTwin->drawTank(window, bodyShape);
+        }
     }
     void moveX(float dx){
         body.velocity.x+=dx;
     }
     void moveY(float dy){
         body.velocity.y+=dy;
+    }
+    void shoot(std::vector<Bullet> &bullets, int angle){
+        if (tankType == 0){
+            tankBasic->shoot(bullets, angle);
+        }
+        else if (tankType == 1){
+            tankTwin->shoot(bullets, angle);
+        }
+    }
+    int getTankType(){
+        return tankType;
     }
 };
 class Minimap{
@@ -167,7 +311,7 @@ class Obstacle{
 public:
     Obj body;
     sf::CircleShape shape;
-    Obstacle(float x, float y,float size,float mapsize,int type):body(x,y,mapsize,size){
+    Obstacle(float x, float y,float size,float mapsize,int type):body(x,y,mapsize,size, 50, 0, 5){
         shape.setPointCount(type);
         shape.setOutlineThickness(5.f);
         shape.setRadius((type==3? 25: type==4? 20: 40));
@@ -192,37 +336,38 @@ public:
         window.draw(shape);
     }
 };
-class Bullet{
+class XpBar{
+private:
+    sf::RectangleShape xpBarBG;
+    sf::RectangleShape xpBar;
+    sf::Text xpText;
+    std::stringstream xpss;
+    sf::Vector2f pos;
 public:
-    Obj body;
-    sf::CircleShape shape;
-    int timetodie;
-    bool alive;
-    Bullet(sf::Vector2f pos, float angle,float size,float speed,int timetodie):body(pos.x,pos.y,2000,size),timetodie(timetodie),alive(true){
-        shape.setRadius(size);
-        shape.setFillColor(sf::Color(0,178,225));
-        shape.setOutlineThickness(3.f);
-        shape.setOutlineColor(sf::Color(14, 144, 178));
-        shape.setOrigin({size,size});
-        shape.setPosition(pos);
-        body.velocity.x=speed * cos(angle*3.14/180);
-        body.velocity.y=speed * sin(angle*3.14/180);
+    XpBar(float x, float y, sf::Vector2f size, MyTank &mytank,sf::Font font) : pos(x,y), xpText(font){
+        xpBarBG.setSize(size);
+        xpBarBG.setPosition({x/2 - size.x/2, y - size.y/2});
+        xpBarBG.setFillColor(sf::Color(100, 100, 100));
+        xpBar.setPosition({x/2 - size.x/2, y - size.y/2});
+        xpBar.setFillColor(sf::Color(0, 255, 0));
+        xpBar.setSize({200.f * mytank.xp / mytank.xp_to_lv_up, 20});
+        xpText.setCharacterSize(14);
+        xpText.setFillColor(sf::Color::White);
     }
-    //void newbullet(float x,float y,float angle,float size,float speed,int timetodie){
-//
-    //}
-    void update(){
-        if(timetodie==0)
-            alive=false;
-        if(alive){
-            timetodie-=1;
-            body.update();
-            shape.setPosition(body.position);
-        }
-        
+    void update(MyTank &mytank){
+        xpBar.setSize({200.f * mytank.xp / mytank.xp_to_lv_up, 20});
+        xpss.str("");
+        xpss.clear();
+        xpss << mytank.xp << "/" << mytank.xp_to_lv_up;
+        sf::FloatRect textBounds = xpText.getLocalBounds();
+        xpText.setOrigin({textBounds.size.x / 2, textBounds.size.y / 2});
+        xpText.setPosition({pos.x / 2, pos.y - 30});
+        xpText.setString(xpss.str());
     }
     void draw(sf::RenderWindow &window){
-        window.draw(shape);
+        window.draw(xpBarBG);
+        window.draw(xpBar);
+        window.draw(xpText);
     }
 };
 int main(){
@@ -242,17 +387,7 @@ int main(){
     sf::View mainview;
     mainview.setSize({(float)WIDTH, (float)HEIGHT});
 
-    MyTank mytank(x,y,bodysize,map_width);
-    Minimap minimap(WIDTH,HEIGHT,120,{map_width,map_height});
-
-    Line line(map_width,map_height);
-    std::vector<Obstacle> obs;
-    std::vector<Bullet> testing;
-    for(int i=0;i<100;i++){
-        int type=rand()%3+3;
-        obs.push_back(Obstacle(rand()%(int)(map_width*2)-map_width,rand()%(int)(map_height*2)-map_height,type*10,map_width,type));
-    }
-    // tải font chữ
+     // tải font chữ
     sf::Font font;
     if(!font.openFromFile("arial.ttf"))
         return -1;
@@ -260,6 +395,24 @@ int main(){
     text.setCharacterSize(14);
     text.setFillColor(sf::Color::Red);
 
+
+    MyTank mytank(x,y,bodysize,map_width);
+    Minimap minimap(WIDTH,HEIGHT,120,{map_width,map_height});
+    XpBar xpbar(WIDTH, HEIGHT, {400, 40}, mytank, font);
+    Line line(map_width,map_height);
+    std::vector<Obstacle> obs;
+    std::vector<Bullet> bullets;
+    for(int i=0;i<100;i++){
+        int type=rand()%3+3;
+        float x, y;
+        // Không sinh obstacle quanh điểm spawn
+        do{
+            x = rand()%(int)(map_width*2)-map_width;
+            y = rand()%(int)(map_height*2)-map_height;
+        }while (std::hypot(x, y) <= 200);
+        obs.push_back(Obstacle(x,y,type*10,map_width,type));
+    }
+   
     int angle=1;
     while(window.isOpen()){
         while (const std::optional event = window.pollEvent()){
@@ -290,15 +443,20 @@ int main(){
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
         int dx=mousePos.x-window.getSize().x/2, dy=mousePos.y-window.getSize().y/2;
         angle=atan2(dy,dx)*180/3.14;
-        if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && mytank.gun.delay==0){
-            testing.push_back(Bullet(mytank.body.position,angle,10,8,150));
-            mytank.gun.delay=30;
+        // Shooting
+        
+        if((sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))){
+            mytank.shoot(bullets, angle);
         }
+
         std::stringstream ss;
 
         mytank.update(angle);
+        mytank.levelUp();
+        xpbar.update(mytank);
         ss << "Mouse pos: " <<mousePos.x <<" "<<mousePos.y<<"\n"<<"angle: "<<angle << '\n'<< "Tank pos: " << mytank.body.position.x << ' ' << mytank.body.position.y << '\n' << "tank speed: " << mytank.body.velocity.x << ' ' << mytank.body.velocity.y<<'\n'<<"window size: "<<window.getSize().x <<' ' << window.getSize().y;
-        text.setString(ss.str());
+        ss << "Level: " << mytank.level << '\n'<< "Score: " << mytank.score << '\n' << "Xp: " << mytank.xp << "/" << mytank.xp_to_lv_up << '\n'<< "HP: " << (int)mytank.body.hp << "/" << (int)mytank.body.maxhp;
+        text.setString(ss.str());      
 
         window.clear(sf::Color(204, 204, 204));
         mainview.setCenter(mytank.body.position);
@@ -306,17 +464,18 @@ int main(){
         
         line.draw(window);
         
-        for(int i=0;i<testing.size();i++){
-            testing[i].update();
-            if(testing[i].alive==true)
-                testing[i].draw(window);
+        for(int i=0;i<bullets.size();i++){
+            bullets[i].update();
+            if(bullets[i].alive==true)
+                bullets[i].draw(window);
         }
         
         for(int i=0;i<100;i++)
             obs[i].DrawObs(window);
-        mytank.Drawtank(window);
+        mytank.Drawtank(window); 
 
         window.setView(window.getDefaultView());
+        xpbar.draw(window);
         minimap.Drawmap(window,mytank.body.position);
         window.draw(text);
         window.display();
