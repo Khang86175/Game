@@ -1,0 +1,16 @@
+# Build / Binary files
+*.exe
+*.out
+*.o
+*.obj
+
+# Build directories
+build/
+cmake-build-debug/
+cmake-build-release/
+Debug/
+Release/
+
+# IDE / Editor settings
+.vscode/
+.idea/
