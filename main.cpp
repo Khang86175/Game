@@ -3,112 +3,96 @@
 #include <cmath>
 #include <algorithm>
 #include <iostream>
-#include <vector>
-#include <cstdlib>
 #include <ctime>
-
-class Map {
-private:
-    sf::RectangleShape background;
-    sf::VertexArray grid;
-    float width, height;
-public:
-    Map(float w, float h)
-        : width(w), height(h), grid(sf::PrimitiveType::Lines) {
-        background.setSize({ w, h });
-        background.setFillColor(sf::Color(204, 204, 204));
-        background.setPosition({ 0, 0 });
-        background.setOrigin({ w / 2, h / 2 });
-
-        float cellW = width / 100; // chiều rộng của 1 ô
-        float cellH = height / 100;  // chiều dài của 1 ô
-        for (float i = -width / 2; i <= width / 2; i += cellW) {
-            sf::Vertex vertex1{ {i, -height / 2}, sf::Color(230,230,230) };
-            sf::Vertex vertex2{ {i, height / 2}, sf::Color(230,230,230) };
-            grid.append(vertex1);
-            grid.append(vertex2);
-        }
-        for (float i = -height / 2; i <= height / 2; i += cellH) {
-            sf::Vertex vertex1{ {-width / 2, i}, sf::Color(230,230,230) };
-            sf::Vertex vertex2{ {width / 2, i}, sf::Color(230,230,230) };
-            grid.append(vertex1);
-            grid.append(vertex2);
-        }
-    }
-    void DrawBackground(sf::RenderWindow& window) {
-        window.draw(background);
-        window.draw(grid);
-    }
-    float getWidth() {
-        return width;
-    }
-    float getHeight() {
-        return height;
-    }
-};
+#include <vector>
 
 class Obj {
 public:
     sf::Vector2f position;
     sf::Vector2f velocity;
+    float mapsize;
+    float hitbox_r;
     float hp, maxhp, hp_regen, body_dmg;
 
-    Obj(float x, float y) :position({ x,y }), velocity({ 0,0 }) {
+    Obj(float x, float y, float mapsize, float size)
+        : position({ x, y }), velocity({ 0, 0 }), mapsize(mapsize), hitbox_r(size) {
         hp = maxhp = 100;
         hp_regen = 1;
         body_dmg = 2;
     }
+
     void update() {
         position += velocity;
+        position.x = std::clamp(position.x, -mapsize + hitbox_r, mapsize - hitbox_r);
+        position.y = std::clamp(position.y, -mapsize + hitbox_r, mapsize - hitbox_r);
         if (hp < maxhp)
             hp += hp_regen;
         if (hp > maxhp)
             hp = maxhp;
     }
-    float Getx() {
-        return position.x;
+
+    bool handleCollisionWith(Obj& other) {
+        float dx = position.x - other.position.x;
+        float dy = position.y - other.position.y;
+        float dist = std::hypot(dx, dy);
+        float minDist = hitbox_r + other.hitbox_r;
+
+        if (dist > 0 && dist < minDist) {
+            sf::Vector2f dir = { dx / dist, dy / dist };
+            float overlap = (minDist - dist);
+
+            position += dir * (overlap * 0.5f);
+            other.position -= dir * (overlap * 0.5f);
+
+            float pushForce = 8.f;
+            velocity += dir * pushForce;
+            other.velocity -= dir * pushForce;
+
+            float damage = body_dmg + overlap * 0.3f;
+            hp -= damage;
+            other.hp -= damage;
+
+            if (hp < 0) hp = 0;
+            if (other.hp < 0) other.hp = 0;
+
+            return true;
+        }
+        return false;
     }
-    float Gety() {
-        return position.y;
+
+    bool isCollidingWith(const Obj& other) const {
+        float dx = position.x - other.position.x;
+        float dy = position.y - other.position.y;
+        float dist = std::hypot(dx, dy);
+        float minDist = hitbox_r + other.hitbox_r;
+        return dist < minDist;
     }
 };
 
 class Cannon {
 public:
     int delay;
-    float angle;
     sf::Vector2f position;
     sf::RectangleShape gun;
 
-    Cannon(float x, float y, float size) :position({ x,y }), angle(0), delay(0) {
+    Cannon(float x, float y, float size) : position({ x, y }), delay(0) {
         gun.setSize({ size * 2, size * 2 / 3 });
         gun.setFillColor(sf::Color(153, 153, 153));
         gun.setOutlineThickness(5.f);
         gun.setOutlineColor(sf::Color(102, 102, 102));
-        gun.setOrigin({ 0,size / 3 });
-        gun.setPosition({ x,y });
+        gun.setOrigin({ 0, size / 3 });
+        gun.setPosition({ x, y });
     }
-    void update(sf::Vector2f pos, int angle) {
+
+    void update(sf::Vector2f pos, float angle) {
+        if (delay > 0) delay--;
         position = pos;
         gun.setPosition(pos);
         gun.setRotation(sf::degrees(angle));
     }
-    void DrawGun(sf::RenderWindow& window) {
-        window.draw(gun);
-    }
-};
 
-// ====== Hitbox class (vòng tròn) =====
-class Hitbox {
-public:
-    float x, y, r;
-    Hitbox(float x = 0, float y = 0, float r = 0) : x(x), y(y), r(r) {}
-    void SetPosition(float nx, float ny) { x = nx; y = ny; }
-    bool CheckCollide(const Hitbox& other) {
-        float dx = x - other.x;
-        float dy = y - other.y;
-        float dist = sqrt(dx * dx + dy * dy);
-        return dist < (r + other.r);
+    void draw(sf::RenderWindow& window) {
+        window.draw(gun);
     }
 };
 
@@ -117,142 +101,297 @@ public:
     Obj body;
     Cannon gun;
     float velocity_max;
-    float dpos;
     float friction;
     sf::CircleShape bodyShape;
-    Hitbox hitbox; // thêm hitbox
+    int score;
+    int level;
 
-    MyTank(float x, float y, float size) :body(x, y), gun(x, y, size), hitbox(x, y, size) {
+    MyTank(float x, float y, float size, float mapsize)
+        : body(x, y, mapsize, size), gun(x, y, size), score(0), level(1) {
         bodyShape.setRadius(size);
         bodyShape.setFillColor(sf::Color(0, 178, 225));
         bodyShape.setOutlineThickness(5.f);
         bodyShape.setOutlineColor(sf::Color(14, 144, 178));
-        bodyShape.setOrigin({ size,size });
-        bodyShape.setPosition({ x,y });
-        body.position = { x,y };
-        body.velocity = { 0,0 };
+        bodyShape.setOrigin({ size, size });
+        bodyShape.setPosition({ x, y });
+        body.velocity = { 0, 0 };
         velocity_max = 6;
-        friction = 0.9;
+        friction = 0.9f;
     }
-    void update(int angle, Map& map) {
+
+    void update(float angle) {
         body.velocity *= friction;
         body.velocity.x = std::clamp(body.velocity.x, -velocity_max, velocity_max);
         body.velocity.y = std::clamp(body.velocity.y, -velocity_max, velocity_max);
-        dpos = std::hypot(body.velocity.x, body.velocity.y);
-        if (dpos > velocity_max) {
-            body.velocity.x = body.velocity.x / dpos * velocity_max;
-            body.velocity.y = body.velocity.y / dpos * velocity_max;
-        }
-        if (body.velocity.x<0.1 && body.velocity.x>-0.1)
+        if (body.velocity.x < 0.1f && body.velocity.x > -0.1f)
             body.velocity.x = 0;
-        if (body.velocity.y<0.1 && body.velocity.y>-0.1)
+        if (body.velocity.y < 0.1f && body.velocity.y > -0.1f)
             body.velocity.y = 0;
         body.update();
-        float r = bodyShape.getRadius();
-        body.position.x = std::clamp(body.position.x, -map.getWidth() / 2 + r, map.getWidth() / 2 - r);
-        body.position.y = std::clamp(body.position.y, -map.getHeight() / 2 + r, map.getHeight() / 2 - r);
-
-        hitbox.SetPosition(body.position.x, body.position.y);
 
         gun.update(body.position, angle);
         bodyShape.setPosition(body.position);
     }
-    void Drawtank(sf::RenderWindow& window) {
-        gun.DrawGun(window);
+
+    void draw(sf::RenderWindow& window) {
+        gun.draw(window);
         window.draw(bodyShape);
     }
+
     void moveX(float dx) {
         body.velocity.x += dx;
     }
+
     void moveY(float dy) {
         body.velocity.y += dy;
     }
 };
 
-// ======= ObstacleMap class =========
-class ObstacleMap {
+class Minimap {
 public:
-    struct Obstacle {
-        sf::ConvexShape shape;
-        Hitbox hitbox;
-    };
-    std::vector<Obstacle> obstacles;
+    sf::RectangleShape map;
+    sf::CircleShape player;
+    sf::Vector2f mapSize;
 
-    ObstacleMap(int count, float mapWidth, float mapHeight) {
-        for (int i = 0; i < count; i++) {
-            int sides = 3 + rand() % 3; // 3,4 hoặc 5 cạnh
-            float size = 30 + (rand() % 3) * 10; // 30,40,50
-
-            sf::ConvexShape poly;
-            poly.setPointCount(sides);
-            for (int j = 0; j < sides; j++) {
-                float angle = j * 2 * 3.14159f / sides - 3.14159f / 2;
-                poly.setPoint(j, sf::Vector2f(cos(angle) * size, sin(angle) * size));
-            }
-
-            float x = -mapWidth / 2 + rand() % (int)(mapWidth);
-            float y = -mapHeight / 2 + rand() % (int)(mapHeight);
-            poly.setPosition(sf::Vector2f(x, y));
-
-
-            if (sides == 3) {
-                poly.setFillColor(sf::Color(252, 118, 119));
-                poly.setOutlineColor(sf::Color(190, 90, 90));
-            }
-            else if (sides == 4) {
-                poly.setFillColor(sf::Color(255, 232, 105));
-                poly.setOutlineColor(sf::Color(195, 178, 80));
-            }
-            else {
-                poly.setFillColor(sf::Color(118, 141, 252));
-                poly.setOutlineColor(sf::Color(96, 112, 189));
-            }
-            poly.setOutlineThickness(3);
-
-            Obstacle obs;
-            obs.shape = poly;
-            obs.hitbox = Hitbox(x, y, size);
-            obstacles.push_back(obs);
-        }
+    Minimap(float x, float y, float size, sf::Vector2f mapsize) : mapSize(mapsize) {
+        map.setSize({ size, size });
+        map.setFillColor(sf::Color(198, 198, 198));
+        map.setOutlineThickness(4.f);
+        map.setOutlineColor(sf::Color(114, 114, 114));
+        map.setOrigin({ size / 2, size / 2 });
+        map.setPosition({ x - size / 2 - 25, y - size / 2 - 25 });
+        player.setRadius(3);
+        player.setFillColor(sf::Color(60, 60, 60));
+        player.setOrigin({ 5, 5 });
     }
-    void DrawObstacles(sf::RenderWindow& window) {
-        for (auto& obs : obstacles)
-            window.draw(obs.shape);
+
+    void draw(sf::RenderWindow& window, sf::Vector2f playerpos) {
+        player.setPosition({
+            playerpos.x / mapSize.x * map.getSize().x / 2 + map.getPosition().x,
+            playerpos.y / mapSize.y * map.getSize().y / 2 + map.getPosition().y
+            });
+        window.draw(map);
+        window.draw(player);
     }
 };
 
+class Line {
+private:
+    sf::VertexArray line;
 
+public:
+    Line(int w, int h) : line(sf::PrimitiveType::Lines) {
+        for (int i = -w; i <= w; i += 50) {
+            line.append(sf::Vertex{ sf::Vector2f(i, -h), sf::Color(195, 195, 195) });
+            line.append(sf::Vertex{ sf::Vector2f(i, h), sf::Color(195, 195, 195) });
+        }
+        for (int i = -h; i <= h; i += 50) {
+            line.append(sf::Vertex{ sf::Vector2f(-w, i), sf::Color(195, 195, 195) });
+            line.append(sf::Vertex{ sf::Vector2f(w, i), sf::Color(195, 195, 195) });
+        }
+    }
+
+    void draw(sf::RenderWindow& window) {
+        window.draw(line);
+    }
+};
+
+class Obstacle {
+public:
+    Obj body;
+    sf::CircleShape shape;
+    bool alive;
+    sf::Clock respawnClock;
+
+    Obstacle(float x, float y, float size, float mapsize, int type)
+        : body(x, y, mapsize, size), alive(true) {
+        shape.setPointCount(type);
+        shape.setOutlineThickness(5.f);
+
+        if (type == 3) {
+            shape.setRadius(25);
+            shape.setFillColor(sf::Color(252, 118, 119));
+            shape.setOutlineColor(sf::Color(190, 90, 90));
+        }
+        else if (type == 4) {
+            shape.setRadius(20);
+            shape.setFillColor(sf::Color(255, 231, 105));
+            shape.setOutlineColor(sf::Color(195, 178, 80));
+        }
+        else {
+            shape.setRadius(40);
+            shape.setFillColor(sf::Color(118, 141, 252));
+            shape.setOutlineColor(sf::Color(96, 112, 189));
+        }
+
+        shape.setOrigin({ size, size });
+        shape.setPosition({ x, y });
+    }
+
+    void draw(sf::RenderWindow& window) {
+        if (alive)
+            window.draw(shape);
+    }
+
+    void respawn(float map_width, float map_height, const std::vector<Obstacle>& others, MyTank& tank) {
+        if (alive) return;
+
+        if (respawnClock.getElapsedTime().asSeconds() >= 30.f) {
+            bool validPos = false;
+            sf::Vector2f newPos;
+
+            while (!validPos) {
+                newPos.x = (rand() % (int)(map_width * 2)) - map_width;
+                newPos.y = (rand() % (int)(map_height * 2)) - map_height;
+                validPos = true;
+
+                if (body.handleCollisionWith(tank.body)) {
+                    validPos = false;
+                    continue;
+                }
+
+                for (const auto& o : others) {
+                    if (&o == this) continue;
+                    if (!o.alive) continue;
+                    float dist = std::hypot(newPos.x - o.body.position.x, newPos.y - o.body.position.y);
+                    if (dist < body.hitbox_r + o.body.hitbox_r) {
+                        validPos = false;
+                        break;
+                    }
+                }
+            }
+
+            body.position = newPos;
+            shape.setPosition(newPos);
+            body.hp = body.maxhp;
+            body.velocity = { 0, 0 };
+            alive = true;
+            respawnClock.restart();
+        }
+    }
+};
+
+class Bullet {
+public:
+    Obj body;
+    sf::CircleShape shape;
+    int timetodie;
+    bool alive;
+    bool fromPlayer;
+
+    Bullet(sf::Vector2f pos, float angle, float size, float speed, int ttd, bool isPlayer = true)
+        : body(pos.x, pos.y, 2000, size), timetodie(ttd), alive(true), fromPlayer(isPlayer) {
+        shape.setRadius(size);
+        shape.setFillColor(sf::Color(0, 178, 225));
+        shape.setOutlineThickness(3.f);
+        shape.setOutlineColor(sf::Color(14, 144, 178));
+        shape.setOrigin({ size, size });
+        shape.setPosition(pos);
+
+        float rad = angle * 3.14159f / 180.f;
+        body.velocity.x = speed * cos(rad);
+        body.velocity.y = speed * sin(rad);
+    }
+
+    void update() {
+        if (timetodie <= 0)
+            alive = false;
+
+        if (alive) {
+            timetodie--;
+            body.update();
+            shape.setPosition(body.position);
+        }
+    }
+
+    void draw(sf::RenderWindow& window) {
+        if (alive)
+            window.draw(shape);
+    }
+};
+
+void handleBulletObstacleCollision(std::vector<Bullet>& bullets, std::vector<Obstacle>& obstacles, MyTank& tank) {
+    for (auto& bullet : bullets) {
+        if (!bullet.alive) continue;
+
+        for (auto& obs : obstacles) {
+            if (!obs.alive) continue;
+
+            if (bullet.body.isCollidingWith(obs.body)) {
+                bullet.alive = false;
+                obs.body.hp -= 10.f;
+
+                if (obs.body.hp <= 0) {
+                    obs.alive = false;
+                    obs.respawnClock.restart();
+                    obs.shape.setFillColor(sf::Color(100, 100, 100));
+                    tank.score += 10;
+                }
+
+                break;
+            }
+        }
+    }
+
+    bullets.erase(
+        std::remove_if(bullets.begin(), bullets.end(),
+            [](const Bullet& b) { return !b.alive; }),
+        bullets.end()
+    );
+}
+
+void handleBulletTankCollision(std::vector<Bullet>& bullets, MyTank& tank) {
+    for (auto& bullet : bullets) {
+        if (!bullet.alive || bullet.fromPlayer) continue; // Không va chạm với đạn của player
+
+        if (bullet.body.handleCollisionWith(tank.body)) {
+            bullet.alive = false;
+            tank.body.hp -= 10.f;
+            if (tank.body.hp < 0) tank.body.hp = 0;
+        }
+    }
+}
 
 int main() {
-    srand(time(0));
-    constexpr unsigned int WIDTH = 800; // dài 
-    constexpr unsigned int HEIGHT = 600; // rộng
-    float acceleration = 0.6; // gia tốc
-    float bodysize = 36;
+    srand((unsigned)time(0));
+
+    constexpr unsigned int WIDTH = 900;
+    constexpr unsigned int HEIGHT = 600;
+    float acceleration = 0.7f;
+    float map_width = 2000.f;
+    float map_height = 2000.f;
+    float bodysize = 36.f;
+
     sf::ContextSettings settings;
     settings.antiAliasingLevel = 4;
-    bool fullscreen = false;
+
     sf::RenderWindow window(sf::VideoMode({ WIDTH, HEIGHT }), "Diep", sf::Style::Default, sf::State::Windowed, settings);
-    window.setFramerateLimit(30);
+    window.setFramerateLimit(60);
 
-    float view_width = WIDTH;
-    float view_height = HEIGHT;
-    sf::View view;
-    view.setSize({ view_width, view_height });
+    sf::View mainview;
+    mainview.setSize({ (float)WIDTH, (float)HEIGHT });
 
-    MyTank mytank(0, 0, bodysize);
-    Map map(2000, 2000);
-    ObstacleMap obstacleMap(30, map.getWidth(), map.getHeight());
-    // tải font chữ
+    MyTank mytank(0, 0, bodysize, map_width);
+    Minimap minimap(WIDTH, HEIGHT, 120, { map_width, map_height });
+    Line line((int)map_width, (int)map_height);
+
+    std::vector<Obstacle> obs;
+    std::vector<Bullet> bullets;
+
+    for (int i = 0; i < 100; i++) {
+        int type = rand() % 3 + 3;
+        float x = (float)((rand() % (int)(map_width * 2)) - (int)map_width);
+        float y = (float)((rand() % (int)(map_height * 2)) - (int)map_height);
+        obs.emplace_back(x, y, (float)(type * 10), map_width, type);
+    }
+
     sf::Font font;
-    if (!font.openFromFile("arial.ttf"))
-        return -1;
-    sf::Text text(font);
-    text.setCharacterSize(14);
-    text.setFillColor(sf::Color::Red);
+    sf::Text scoreText(font);
+    scoreText.setCharacterSize(24);
+    scoreText.setFillColor(sf::Color::Black);
+    scoreText.setPosition({ 10.f, 10.f });
 
-
-    int angle = 1;
+    float angle = 0.f;
 
     while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
@@ -265,44 +404,72 @@ int main() {
             }
         }
 
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
             mytank.moveY(-acceleration);
-        }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
             mytank.moveY(acceleration);
-        }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
             mytank.moveX(-acceleration);
-        }
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
             mytank.moveX(acceleration);
+
+        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+        float dx = (float)(mousePos.x - (int)window.getSize().x / 2);
+        float dy = (float)(mousePos.y - (int)window.getSize().y / 2);
+        angle = atan2(dy, dx) * 180.f / 3.14159f;
+
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && mytank.gun.delay == 0) {
+            bullets.emplace_back(mytank.body.position, angle, 10.f, 8.f, 150);
+            mytank.gun.delay = 15;
         }
 
-        sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window), view);
-        int dx = mousePos.x - mytank.body.Getx(), dy = mousePos.y - mytank.body.Gety();
-        angle = atan2(dy, dx) * 180 / 3.14;
+        mytank.update(angle);
 
-        mytank.update(angle, map);
-
-        // Kiểm tra va chạm với vật cản
-        for (int i = 0; i < (int)obstacleMap.obstacles.size(); i++) {
-            if (mytank.hitbox.CheckCollide(obstacleMap.obstacles[i].hitbox)) {
-                // Đẩy tank về vị trí cũ
-                mytank.body.position -= mytank.body.velocity;
-                mytank.bodyShape.setPosition(mytank.body.position);
-                mytank.gun.update(mytank.body.position, angle);
-                mytank.hitbox.SetPosition(mytank.body.position.x, mytank.body.position.y);
-                break;
+        for (auto& o : obs) {
+            if (o.alive) {
+                mytank.body.handleCollisionWith(o.body);
+                o.shape.setPosition(o.body.position);
+                if (o.body.hp <= 0) {
+                    o.alive = false;
+                    o.respawnClock.restart();
+                }
             }
         }
 
-        view.setCenter(mytank.body.position);
+        for (auto& b : bullets) {
+            b.update();
+        }
+
+        handleBulletObstacleCollision(bullets, obs, mytank);
+        handleBulletTankCollision(bullets, mytank);
+
+        for (auto& o : obs) {
+            if (!o.alive) {
+                o.respawn(map_width, map_height, obs, mytank);
+            }
+        }
+
         window.clear(sf::Color(204, 204, 204));
-        map.DrawBackground(window);
-        obstacleMap.DrawObstacles(window);
-        window.draw(text);
-        mytank.Drawtank(window);
-        window.setView(view);
+        mainview.setCenter(mytank.body.position);
+        window.setView(mainview);
+
+        line.draw(window);
+
+        for (auto& o : obs) {
+            o.draw(window);
+        }
+
+        for (auto& b : bullets) {
+            b.draw(window);
+        }
+
+        mytank.draw(window);
+
+        window.setView(window.getDefaultView());
+        scoreText.setString("Score: " + std::to_string(mytank.score) + " | Bullets: " + std::to_string(bullets.size()));
+        window.draw(scoreText);
+        minimap.draw(window, mytank.body.position);
+
         window.display();
     }
 
