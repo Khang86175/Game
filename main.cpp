@@ -163,7 +163,7 @@ public:
     //float dpos;
     float friction;
     sf::CircleShape bodyShape;
-    int xp, xp_to_lv_up;
+    int xp_base, xp_to_lv_up;
     int score;
     int level;
 
@@ -172,7 +172,7 @@ public:
     TankTwin *tankTwin;
     float size;
 
-    MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size,100, 0.2f, 2),score(0),level(6), xp(0), xp_to_lv_up(100), tankType(0), size(size), tankTwin(nullptr){
+    MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size,100, 0.2f, 2),score(0),level(1), xp_base(0), xp_to_lv_up(100), tankType(0), size(size), tankTwin(nullptr){
         bodyShape.setRadius(size);
         bodyShape.setFillColor(sf::Color(0,178,225));
         bodyShape.setOutlineThickness(5.f);
@@ -214,15 +214,14 @@ public:
         }
         bodyShape.setPosition(body.position);
     }
-    void addScore_XP(int point){
+    void addScore(int point){
         score += point;
-        xp += point;
     }
     void levelUp(){
-        if (xp >= xp_to_lv_up){
+        if (score >= xp_to_lv_up){
             level += 1;
-            xp -= xp_to_lv_up;
-            xp_to_lv_up = level*100;
+            xp_base = xp_to_lv_up;
+            xp_to_lv_up += level*100;
 
             body.maxhp += 20;
             body.hp = body.maxhp;
@@ -343,26 +342,33 @@ private:
     sf::Text xpText;
     std::stringstream xpss;
     sf::Vector2f pos;
+    sf::Vector2f size;
 public:
-    XpBar(float x, float y, sf::Vector2f size, MyTank &mytank,sf::Font font) : pos(x,y), xpText(font){
+    XpBar(float x, float y, sf::Vector2f size, MyTank &mytank,sf::Font font) : pos(x,y), xpText(font), size(size){
         xpBarBG.setSize(size);
-        xpBarBG.setPosition({x/2 - size.x/2, y - size.y/2});
-        xpBarBG.setFillColor(sf::Color(100, 100, 100));
-        xpBar.setPosition({x/2 - size.x/2, y - size.y/2});
-        xpBar.setFillColor(sf::Color(0, 255, 0));
-        xpBar.setSize({200.f * mytank.xp / mytank.xp_to_lv_up, 20});
-        xpText.setCharacterSize(14);
-        xpText.setFillColor(sf::Color::White);
+        xpBarBG.setOrigin({size.x/2, size.y/2});
+        xpBarBG.setPosition({x/2-25, y-25});
+        xpBarBG.setFillColor(sf::Color(150,150,150));
+        xpBarBG.setOutlineThickness(4.f);
+        xpBarBG.setOutlineColor(sf::Color(114,114,114));
+        xpBar.setOrigin({size.x/2, size.y/2});
+        xpBar.setPosition({x/2 -25, y -25});
+        xpBar.setFillColor(sf::Color(0, 240, 0));
+        xpBar.setSize({size.x *(mytank.score-mytank.xp_base)/(mytank.xp_to_lv_up-mytank.xp_base), size.y});
+        // xpText.setCharacterSize(14);
+        // xpText.setFillColor(sf::Color::White);
     }
     void update(MyTank &mytank){
-        xpBar.setSize({200.f * mytank.xp / mytank.xp_to_lv_up, 20});
-        xpss.str("");
-        xpss.clear();
-        xpss << mytank.xp << "/" << mytank.xp_to_lv_up;
-        sf::FloatRect textBounds = xpText.getLocalBounds();
-        xpText.setOrigin({textBounds.size.x / 2, textBounds.size.y / 2});
-        xpText.setPosition({pos.x / 2, pos.y - 30});
-        xpText.setString(xpss.str());
+        float ratio = (float)(mytank.score - mytank.xp_base) / (mytank.xp_to_lv_up - mytank.xp_base);
+        ratio = std::clamp(ratio, 0.f, 1.f);
+        xpBar.setSize({size.x * ratio, size.y});
+        // xpss.str("");
+        // xpss.clear();
+        // xpss << mytank.xp << "/" << mytank.xp_to_lv_up;
+        // sf::FloatRect textBounds = xpText.getLocalBounds();
+        // xpText.setOrigin({textBounds.size.x / 2, textBounds.size.y / 2});
+        // xpText.setPosition({pos.x / 2, pos.y - 30});
+        // xpText.setString(xpss.str());
     }
     void draw(sf::RenderWindow &window){
         window.draw(xpBarBG);
@@ -398,7 +404,7 @@ int main(){
 
     MyTank mytank(x,y,bodysize,map_width);
     Minimap minimap(WIDTH,HEIGHT,120,{map_width,map_height});
-    XpBar xpbar(WIDTH, HEIGHT, {400, 40}, mytank, font);
+    XpBar xpbar(WIDTH, HEIGHT, {600, 10}, mytank, font);
     Line line(map_width,map_height);
     std::vector<Obstacle> obs;
     std::vector<Bullet> bullets;
@@ -422,6 +428,14 @@ int main(){
             else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()){
                 if (keyPressed->scancode == sf::Keyboard::Scancode::Escape)
                     window.close();
+                    if (keyPressed->scancode == sf::Keyboard::Scancode::R){
+                        mytank.addScore(100);
+                        mytank.levelUp();
+                    }
+                    if (keyPressed->scancode == sf::Keyboard::Scancode::T){
+                        mytank.score = 0;
+                        mytank.levelUp();
+                    }
             }
         }
         // di chuyển 
@@ -455,7 +469,7 @@ int main(){
         mytank.levelUp();
         xpbar.update(mytank);
         ss << "Mouse pos: " <<mousePos.x <<" "<<mousePos.y<<"\n"<<"angle: "<<angle << '\n'<< "Tank pos: " << mytank.body.position.x << ' ' << mytank.body.position.y << '\n' << "tank speed: " << mytank.body.velocity.x << ' ' << mytank.body.velocity.y<<'\n'<<"window size: "<<window.getSize().x <<' ' << window.getSize().y;
-        ss << "Level: " << mytank.level << '\n'<< "Score: " << mytank.score << '\n' << "Xp: " << mytank.xp << "/" << mytank.xp_to_lv_up << '\n'<< "HP: " << (int)mytank.body.hp << "/" << (int)mytank.body.maxhp;
+        ss << "Level: " << mytank.level << '\n'<< "Score: " << mytank.score << '\n' << "Xp_base: " << mytank.xp_base << "/" << mytank.xp_to_lv_up << '\n'<< "HP: " << (int)mytank.body.hp << "/" << (int)mytank.body.maxhp;
         text.setString(ss.str());      
 
         window.clear(sf::Color(204, 204, 204));
