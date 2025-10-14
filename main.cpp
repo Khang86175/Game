@@ -339,12 +339,12 @@ class XpBar{
 private:
     sf::RectangleShape xpBarBG;
     sf::RectangleShape xpBar;
-    sf::Text xpText;
-    std::stringstream xpss;
+    sf::Text xpText, scoreText;
+    std::stringstream xpss, scoress;
     sf::Vector2f pos;
     sf::Vector2f size;
 public:
-    XpBar(float x, float y, sf::Vector2f size, MyTank &mytank,sf::Font font) : pos(x,y), xpText(font), size(size){
+    XpBar(float x, float y, sf::Vector2f size, MyTank &mytank,sf::Font font) : pos(x,y), xpText(font), scoreText(font), size(size){
         xpBarBG.setSize(size);
         xpBarBG.setOrigin({size.x/2, size.y/2});
         xpBarBG.setPosition({x/2-25, y-25});
@@ -354,26 +354,39 @@ public:
         xpBar.setOrigin({size.x/2, size.y/2});
         xpBar.setPosition({x/2 -25, y -25});
         xpBar.setFillColor(sf::Color(0, 240, 0));
-        xpBar.setSize({size.x *(mytank.score-mytank.xp_base)/(mytank.xp_to_lv_up-mytank.xp_base), size.y});
-        // xpText.setCharacterSize(14);
-        // xpText.setFillColor(sf::Color::White);
+        xpText.setCharacterSize(14);
+        xpText.setFillColor(sf::Color::White);
+        xpText.setOutlineThickness(2.f);
+        xpText.setOutlineColor(sf::Color::Black);
+        scoreText.setCharacterSize(12);
+        scoreText.setFillColor(sf::Color::White);
+        scoreText.setOutlineThickness(2.f);
+        scoreText.setOutlineColor(sf::Color::Black);
     }
     void update(MyTank &mytank){
         float ratio = (float)(mytank.score - mytank.xp_base) / (mytank.xp_to_lv_up - mytank.xp_base);
         ratio = std::clamp(ratio, 0.f, 1.f);
         xpBar.setSize({size.x * ratio, size.y});
-        // xpss.str("");
-        // xpss.clear();
-        // xpss << mytank.xp << "/" << mytank.xp_to_lv_up;
-        // sf::FloatRect textBounds = xpText.getLocalBounds();
-        // xpText.setOrigin({textBounds.size.x / 2, textBounds.size.y / 2});
-        // xpText.setPosition({pos.x / 2, pos.y - 30});
-        // xpText.setString(xpss.str());
+        xpss.str("");
+        xpss.clear();
+        xpss << "Level " << mytank.level;
+        sf::FloatRect xpTextBounds = xpText.getLocalBounds();
+        xpText.setOrigin({xpTextBounds.size.x / 2, xpTextBounds.size.y / 2});
+        xpText.setPosition({pos.x / 2-30, pos.y-25});
+        xpText.setString(xpss.str());
+        sf::FloatRect scoreTextBounds =  scoreText.getLocalBounds();
+        scoreText.setOrigin({scoreTextBounds.size.x / 2, scoreTextBounds.size.y / 2});
+        scoreText.setPosition({pos.x / 2 - 30, pos.y - 50});
+        scoress.str("");
+        scoress.clear();
+        scoress << "Score: " << mytank.score;
+        scoreText.setString(scoress.str());
     }
     void draw(sf::RenderWindow &window){
         window.draw(xpBarBG);
         window.draw(xpBar);
         window.draw(xpText);
+        window.draw(scoreText);
     }
 };
 int main(){
@@ -400,11 +413,14 @@ int main(){
     sf::Text text(font);
     text.setCharacterSize(14);
     text.setFillColor(sf::Color::Red);
+    sf::Font SupercellMagic;
+    if(!SupercellMagic.openFromFile("Supercell-Magic Regular.ttf"))
+        return -1;
 
 
     MyTank mytank(x,y,bodysize,map_width);
     Minimap minimap(WIDTH,HEIGHT,120,{map_width,map_height});
-    XpBar xpbar(WIDTH, HEIGHT, {600, 10}, mytank, font);
+    XpBar xpbar(WIDTH, HEIGHT, {400, 10}, mytank, SupercellMagic);
     Line line(map_width,map_height);
     std::vector<Obstacle> obs;
     std::vector<Bullet> bullets;
