@@ -97,12 +97,17 @@ public:
             body.update();
             shape.setPosition(body.position);
         }
-        
     }
     void draw(sf::RenderWindow &window){
         window.draw(shape);
     }
 };
+void removeBullet(std::vector<Bullet> &bullets, int index){
+    if(!bullets.empty()){
+        std::swap(bullets[index], bullets.back());
+        bullets.pop_back();
+    }
+}
 class TankBasic{
 public:
     Cannon gun;
@@ -494,12 +499,13 @@ int main(){
         
         line.draw(window);
         
-        for(int i=0;i<bullets.size();i++){
+        for (int i = bullets.size() - 1; i >= 0; --i) {
             bullets[i].update();
-            if(bullets[i].alive==true)
+            if (bullets[i].alive)
                 bullets[i].draw(window);
-        }
-        
+            else
+                removeBullet(bullets, i);
+        }       
         for(int i=0;i<100;i++)
             obs[i].DrawObs(window);
         mytank.Drawtank(window); 
