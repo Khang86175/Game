@@ -151,10 +151,7 @@ public:
 };
 
 void removeBullet(std::vector<Bullet>& bullets, int index) {
-    if (!bullets.empty()) {
-        std::swap(bullets[index], bullets.back());
-        bullets.pop_back();
-    }
+    if (!bullets.empty()) { std::swap(bullets[index], bullets.back()); bullets.pop_back(); }
 }
 
 class TankBasic {
@@ -372,7 +369,7 @@ public:
     int xp_reward;
     bool alive{ true };
     sf::Clock respawnClock;
-
+    float friction{ 0.9f };
     struct Conf {
         float drawRadius;
         float hp;
@@ -401,6 +398,15 @@ public:
         shape.setOutlineColor(c.outline);
         float randomDeg = static_cast<float>(rand() % 360);
         shape.setRotation(sf::degrees(randomDeg));
+    }
+
+    void update() {
+        if (!alive) return;
+        body.velocity *= friction;
+        if (std::abs(body.velocity.x) < 0.1f) body.velocity.x = 0.f;
+        if (std::abs(body.velocity.y) < 0.1f) body.velocity.y = 0.f;
+        body.update();
+        shape.setPosition(body.position);
     }
 
     void DrawObs(sf::RenderWindow& window) { if (alive) window.draw(shape); }
@@ -761,7 +767,13 @@ int main() {
 
         for (auto& o : obs) {
             if (!o.alive) continue;
-            if (mytank.body.handleCollisionWith(o.body)) o.shape.setPosition(o.body.position);
+            o.update();
+            if (mytank.body.handleCollisionWith(o.body)) {
+                o.shape.setPosition(o.body.position);
+                mytank.bodyShape.setPosition(mytank.body.position);
+                if (mytank.getTankType() == 0) mytank.tankBasic->gun.update(mytank.body.position, angle);
+                else mytank.tankTwin->update(mytank.body.position, (float)angle);
+            }
             if (o.body.hp <= 0.f) { o.alive = false; o.respawnClock.restart(); o.shape.setFillColor(sf::Color(100, 100, 100)); }
         }
 
