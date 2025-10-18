@@ -13,6 +13,7 @@ constexpr float HITBOX_SCALE = 0.85f;
 float hypot2(const sf::Vector2f &x){
     return hypot(x.x,x.y);
 }
+
 struct Stats{
     int hp_regen = 0;
     int maxhp = 0;
@@ -25,6 +26,7 @@ struct Stats{
 
     int maxLevel = 7;
 };
+
 class Obj{
 public:
     sf::Vector2f position;
@@ -56,27 +58,30 @@ public:
     void setBodyDmg(float new_body_dmg){
         body_dmg = new_body_dmg;
     }
-    bool handleCollisionWith(Obj& other) {
+    void handleCollisionWith(Obj& other,bool instant=true,bool bounce = true,float bounceScale =1) {
         float dx = position.x - other.position.x;
         float dy = position.y - other.position.y;
         float dist = std::hypot(dx, dy);
         float minDist = hitbox_r + other.hitbox_r;
+        sf::Vector2f dir = { dx / dist, dy / dist };
+        float overlap = (minDist - dist);
 
-        if (dist < minDist) {
-            sf::Vector2f dir = { dx / dist, dy / dist };
-            float overlap = (minDist - dist);
-
+        if(instant == false){
             position += dir * (overlap * 0.5f);
             other.position -= dir * (overlap * 0.5f);
-
-            float pushForce = (hypot2(velocity)+hypot2(other.velocity))/1.5;
-            velocity += dir * pushForce;
-            other.velocity -= dir * pushForce;
             hp = std::max(0.f, hp - other.body_dmg);
             other.hp = std::max(0.f, other.hp - body_dmg);
-            return true;
         }
-        return false;
+        else {
+            int time_collosions=std::min(std::ceil(hp/other.body_dmg),std::ceil(other.hp/body_dmg));
+            hp=std::max(0.f,hp-time_collosions*other.body_dmg);
+            other.hp=std::max(0.f,other.hp-time_collosions*body_dmg);
+        }
+        if(bounce){
+            float pushForce = (hypot2(velocity)+hypot2(other.velocity))/1.5*bounceScale;
+            velocity += dir * pushForce;
+            other.velocity -= dir * pushForce;
+        }
     }
     bool isCollidingWith(const Obj& other) const {
         float dx = position.x - other.position.x;
@@ -85,6 +90,7 @@ public:
         return dist < (hitbox_r + other.hitbox_r);
     }
 };
+
 class Cannon{
 public:
     int delay, reload;
@@ -118,6 +124,7 @@ public:
     //    gun.setSize({size*2, size*2/3});
     //}
 };
+
 class Bullet{
 public:
     Obj body;
@@ -155,6 +162,7 @@ public:
         window.draw(shape);
     }
 };
+
 void removeBullet(std::vector<Bullet> &bullets, int index){
     if(!bullets.empty()){
         std::swap(bullets[index], bullets.back());
@@ -235,7 +243,7 @@ public:
     float base_maxhp = 100;
     float base_body_dmg = 2;
     float base_bullet_speed = 8;
-    int base_bullet_life = fps*5;
+    int base_bullet_life = 50;
     float base_bullet_dmg = 10;
     int base_reload = 30;
     float base_move_speed = 6;
@@ -514,10 +522,10 @@ public:
 
     void update() {
         if (!alive) return;
+        body.update();
         body.velocity *= friction;
         if (std::abs(body.velocity.x) < 0.1f) body.velocity.x = 0.f;
         if (std::abs(body.velocity.y) < 0.1f) body.velocity.y = 0.f;
-        body.update();
         shape.setPosition(body.position);
     }
 
@@ -558,46 +566,22 @@ public:
     }
 };
 void handleBulletObstacleCollision(std::vector<Bullet>& bullets, std::vector<Obstacle>& obstacles, MyTank& mytank) {
-    const float EPS = 1e-3f;
-    for (auto& bullet : bullets) {
-        if (!bullet.alive) continue;
-        for (auto& obs : obstacles) {
-            if (!obs.alive) continue;
-            if (bullet.body.isCollidingWith(obs.body)) {
-                float A = std::max(0.0f, obs.body.body_dmg);
-                float B = std::max(0.0f, bullet.body.body_dmg);
-                float a = std::max(0.0f, bullet.body.hp);
-                float b = std::max(0.0f, obs.body.hp);
-                if (A <= 0.f && B <= 0.f) { bullet.alive = false; break; }
-                float tb = (A > 0.f) ? (a / A) : std::numeric_limits<float>::infinity();
-                float to = (B > 0.f) ? (b / B) : std::numeric_limits<float>::infinity();
-                if (tb + 1e-6f < to) {
-                    float t = tb;
-                    bullet.body.hp = 0.f;
-                    obs.body.hp = std::max(EPS, b - B * t);
+    for (int i=0;i<bullets.size();i++) {
+        if (!bullets[i].alive) 
+            continue;
+        for (int j=0;j<obstacles.size();j++) {
+            if (!obstacles[j].alive) 
+                continue;
+            if (bullets[i].body.isCollidingWith(obstacles[j].body)) {
+                bullets[i].body.handleCollisionWith(obstacles[j].body,true,true,0.5);
+                if (bullets[i].body.hp <= 0.f){
+                    bullets[i].alive = false;
                 }
-                else if (to + 1e-6f < tb) {
-                    float t = to;
-                    obs.body.hp = 0.f;
-                    bullet.body.hp = std::max(EPS, a - A * t);
-                }
-                else {
-                    if (a >= b) {
-                        float t = to;
-                        obs.body.hp = 0.f;
-                        bullet.body.hp = std::max(EPS, a - A * t);
-                    }
-                    else {
-                        float t = tb;
-                        bullet.body.hp = 0.f;
-                        obs.body.hp = std::max(EPS, b - B * t);
-                    }
-                }
-                if (bullet.body.hp <= 0.f) bullet.alive = false;
-                if (obs.body.hp <= 0.f) {
-                    obs.alive = false;
-                    obs.timeToRespawn=frame;
-                    mytank.addScore(obs.xp_reward);
+                if (obstacles[j].body.hp <= 0.f) {
+                    obstacles[j].alive = false;
+                    obstacles[j].timeToRespawn=frame+fps*30;
+                    mytank.addScore(obstacles[j].xp_reward);
+                    mytank.levelUp();
                 }
                 break;
             }
@@ -609,47 +593,58 @@ void handleBulletObstacleCollision(std::vector<Bullet>& bullets, std::vector<Obs
 }
 void handleBulletTankCollision(std::vector<Bullet>& enemy_bullets, MyTank& tank) {
     const float EPS = 1e-3f;
-    for (auto& bullet : enemy_bullets) {
-        if (!bullet.alive) 
+    for (int i=0;i<enemy_bullets.size();i++) {
+        if (!enemy_bullets[i].alive) 
             continue;
-        if (bullet.body.isCollidingWith(tank.body) == false) 
+        if (enemy_bullets[i].body.isCollidingWith(tank.body) == false) 
             continue;
-        float A = std::max(0.0f, tank.body.body_dmg);
-        float B = std::max(0.0f, bullet.body.body_dmg);
-        float a = std::max(0.0f, bullet.body.hp);
-        float b = std::max(0.0f, tank.body.hp);
-        if (A <= 0.f && B <= 0.f) { 
-            bullet.alive = false; 
-            continue; 
+        enemy_bullets[i].body.handleCollisionWith(tank.body,true,true,0.5);
+        if (enemy_bullets[i].body.hp <= 0.f){
+            enemy_bullets[i].alive = false;
+            removeBullet(enemy_bullets,i);
         }
-        float tb = (A > 0.f) ? (a / A) : std::numeric_limits<float>::infinity();
-        float to = (B > 0.f) ? (b / B) : std::numeric_limits<float>::infinity();
-        if (tb + 1e-6f < to) {
-            float t = tb;
-            bullet.body.hp = 0.f;
-            tank.body.hp = std::max(EPS, b - B * t);
-        }
-        else if (to + 1e-6f < tb) {
-            float t = to;
-            tank.body.hp = 0.f;
-            bullet.body.hp = std::max(EPS, a - A * t);
-        }
-        else {
-            if (a >= b) {
-                float t = to;
-                tank.body.hp = 0.f;
-                bullet.body.hp = std::max(EPS, a - A * t);
-            }
-            else {
-                float t = tb;
-                bullet.body.hp = 0.f;
-                tank.body.hp = std::max(EPS, b - B * t);
-            }
-        }
-        if (bullet.body.hp <= 0.f) bullet.alive = false;
     }
 }
+void handleBullet_BulletCollision(std::vector<Bullet>& my_bullets,std::vector<Bullet>& enemy_bullets){
+    for(int i=0;i<my_bullets.size();i++){
+        if(my_bullets[i].alive==false)
+            continue;
+        for(int j=0;j<enemy_bullets.size();j++){
+            if(enemy_bullets[j].alive == false)
+                continue;
+            my_bullets[i].body.handleCollisionWith(enemy_bullets[j].body,true,false);
+            if(my_bullets[i].body.hp == 0){
+                my_bullets[i].alive=false;
+            }
+            if(enemy_bullets[j].body.hp==0){
+                enemy_bullets[j].alive=false;
+            }
+        }
+    }
+    for(int i=0;i<my_bullets.size();i++)
+        if(my_bullets[i].alive == false)
+            removeBullet(my_bullets,i);
+    for(int i=0;i<enemy_bullets.size();i++)
+        if(enemy_bullets[i].alive == false)
+            removeBullet(enemy_bullets,i);
 
+}
+void handleTankObstacleCollision(MyTank &tank,std::vector<Obstacle> & obs){
+    for(int i=0;i<obs.size();i++){
+        if(obs[i].alive==false)
+            continue;
+        if(obs[i].body.isCollidingWith(tank.body)){
+            tank.body.handleCollisionWith(obs[i].body,false,true,0.5);
+            if(obs[i].body.hp<=0){
+                obs[i].alive = false;
+                tank.addScore(obs[i].xp_reward);
+                tank.levelUp();
+                obs[i].timeToRespawn=frame+fps*30;
+            }
+            return;
+        }
+    }
+}
 class XpBar{
 private:
     sf::RectangleShape xpBarBG;
@@ -955,33 +950,17 @@ int main(){
             bullets[i].update();
             if (!bullets[i].alive)
                 removeBullet(bullets, i);
-        }       
+        }
         for (auto& o : obs) {
             o.update();
-            if (!o.alive) continue;
-            if(mytank.body.isCollidingWith(o.body)){
-                mytank.body.handleCollisionWith(o.body);
-                
-                o.shape.setPosition(o.body.position);
-                mytank.bodyShape.setPosition(mytank.body.position);
-                if (mytank.getTankType() == 0) 
-                    mytank.tankBasic->gun.update(mytank.body.position, angle);
-                else 
-                    mytank.tankTwin->update(mytank.body.position, (float)angle);
-            }
-            if (o.body.hp <= 0.f) { 
-                o.alive = false;
-                mytank.addScore(o.xp_reward);
-                mytank.levelUp();
-                o.timeToRespawn=frame+fps*30;
-            }
         }
+        handleTankObstacleCollision(mytank,obs);
         handleBulletObstacleCollision(bullets, obs, mytank);
         handleBulletTankCollision(enemy_bullets, mytank);
-
-        for (auto& o : obs) 
-            if (!o.alive) 
-                o.respawn(map_width, map_height, obs, mytank.body);
+        handleBullet_BulletCollision(enemy_bullets,bullets);
+        //for (auto& o : obs) 
+        //    if (!o.alive) 
+        //        o.respawn(map_width, map_height, obs, mytank.body);
 
         window.clear(sf::Color(204, 204, 204));
 
@@ -999,6 +978,7 @@ int main(){
         window.draw(text);
 
         window.display();
+
         frame++;
     }
 
