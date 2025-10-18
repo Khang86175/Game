@@ -5,6 +5,14 @@
 #include <iostream>
 #include <ctime>
 
+
+const int fps =30;
+int frame=0;
+constexpr float HITBOX_SCALE = 0.85f;
+
+float hypot2(const sf::Vector2f &x){
+    return hypot(x.x,x.y);
+}
 struct Stats{
     int hp_regen = 0;
     int maxhp = 0;
@@ -31,10 +39,7 @@ public:
         position+=velocity;
         position.x=std::clamp(position.x,-mapsize+hitbox_r,mapsize-hitbox_r);
         position.y=std::clamp(position.y,-mapsize+hitbox_r,mapsize-hitbox_r);
-        if(hp<maxhp)
-            hp+=hp_regen;
-        if(hp>maxhp)
-            hp=maxhp;
+        hp=std::min(maxhp,hp+hp_regen);
     }
     float Getx(){
         return position.x;
@@ -51,16 +56,35 @@ public:
     void setBodyDmg(float new_body_dmg){
         body_dmg = new_body_dmg;
     }
-};
-float CheckCollision(const Obj &a,const Obj &b){
-    float dx=a.position.x-b.position.x;
-    float dy=a.position.y-b.position.y;
-    float distance=std::hypot(dx,dy);
-    if(distance<a.hitbox_r+b.hitbox_r){
-        return distance;
+    bool handleCollisionWith(Obj& other) {
+        float dx = position.x - other.position.x;
+        float dy = position.y - other.position.y;
+        float dist = std::hypot(dx, dy);
+        float minDist = hitbox_r + other.hitbox_r;
+
+        if (dist < minDist) {
+            sf::Vector2f dir = { dx / dist, dy / dist };
+            float overlap = (minDist - dist);
+
+            position += dir * (overlap * 0.5f);
+            other.position -= dir * (overlap * 0.5f);
+
+            float pushForce = (hypot2(velocity)+hypot2(other.velocity))/1.5;
+            velocity += dir * pushForce;
+            other.velocity -= dir * pushForce;
+            hp = std::max(0.f, hp - other.body_dmg);
+            other.hp = std::max(0.f, other.hp - body_dmg);
+            return true;
+        }
+        return false;
     }
-    return 0;
-}
+    bool isCollidingWith(const Obj& other) const {
+        float dx = position.x - other.position.x;
+        float dy = position.y - other.position.y;
+        float dist = std::hypot(dx, dy);
+        return dist < (hitbox_r + other.hitbox_r);
+    }
+};
 class Cannon{
 public:
     int delay, reload;
@@ -140,7 +164,6 @@ void removeBullet(std::vector<Bullet> &bullets, int index){
 class TankBasic{
 public:
     Cannon gun;
-
     TankBasic(float x, float y, float size) : gun(x,y,size, 30){}
     void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape){
         gun.DrawGun(window);
@@ -212,12 +235,12 @@ public:
     float base_maxhp = 100;
     float base_body_dmg = 2;
     float base_bullet_speed = 8;
-    int base_bullet_life = 150;
+    int base_bullet_life = fps*5;
     float base_bullet_dmg = 10;
     int base_reload = 30;
     float base_move_speed = 6;
 
-    MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size,100, 0.2f, 2),score(0),level(1), xp_base(0), xp_to_lv_up(50), tankType(0), tankTwin(nullptr), statPoint(0){
+    MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size,100, 0.2f, 2),score(0),level(1), xp_base(0), xp_to_lv_up(30), tankType(0), tankTwin(nullptr), statPoint(0){
         bodyShape.setRadius(size);
         bodyShape.setFillColor(sf::Color(0,178,225));
         bodyShape.setOutlineThickness(5.f);
@@ -279,8 +302,9 @@ public:
     void levelUp(){
         if (score >= xp_to_lv_up){
             level += 1;
+            int temp=(xp_to_lv_up-xp_base)*(1.5-level/10);
             xp_base = xp_to_lv_up;
-            xp_to_lv_up += level*50;
+            xp_to_lv_up += temp;
             statPoint += 1;
 
             body.hp = body.maxhp;
@@ -408,6 +432,7 @@ class Minimap{
 public:
     sf::RectangleShape map;
     sf::CircleShape player;
+    sf::CircleShape enemy;
     sf::Vector2f Mapsize;
     Minimap(float x, float y, float size,sf::Vector2f mapsize):Mapsize(mapsize){
         map.setSize({size,size});
@@ -418,10 +443,14 @@ public:
         map.setPosition({x-size/2-25,y-size/2-25});
         player.setRadius(3);
         player.setFillColor(sf::Color(60,60,60));
-        player.setOrigin({5,5});
+        player.setOrigin({3,3});
+        enemy.setRadius(3);
+        enemy.setFillColor(sf::Color(239,77,85));
+        enemy.setOrigin({3,3});
     }
-    void Drawmap(sf::RenderWindow &window,sf::Vector2f playerpos={120,120}){
+    void Drawmap(sf::RenderWindow &window,sf::Vector2f playerpos={120,120},sf::Vector2f enemypos={120,120}){
         player.setPosition({playerpos.x/Mapsize.x*map.getSize().x/2+map.getPosition().x, playerpos.y/Mapsize.y*map.getSize().y/2+map.getPosition().y});
+        enemy.setPosition({enemypos.x/Mapsize.x*map.getSize().x/2+map.getPosition().x,enemypos.y/Mapsize.y*map.getSize().y/2+map.getPosition().y});
         window.draw(map);
         window.draw(player);
     }
@@ -444,35 +473,183 @@ public:
         window.draw(line);
     }
 };
-class Obstacle{
+class Obstacle {
 public:
     Obj body;
     sf::CircleShape shape;
-    Obstacle(float x, float y,float size,float mapsize,int type):body(x,y,mapsize,size, 50, 0, 5){
-        shape.setPointCount(type);
-        shape.setOutlineThickness(5.f);
-        shape.setRadius((type==3? 25: type==4? 20: 40));
-        if(type==3){
-            shape.setFillColor(sf::Color(252, 118, 119));
-            shape.setOutlineColor(sf::Color(190, 90, 90));
-        }
-        else if(type==4){
-            shape.setFillColor(sf::Color(255, 231, 105));
-            shape.setOutlineColor(sf::Color(195, 178, 80));
-        }
-        else{
-            shape.setFillColor(sf::Color(118, 141, 252));
-            shape.setOutlineColor(sf::Color(96, 112, 189));
-        }
-        shape.setOrigin({size,size});
-        shape.setPosition({x,y});
+    int type;
+    int xp_reward;
+    bool alive{ true };
+    int timeToRespawn=0;
+    float friction{ 0.9f };
+    struct Conf {
+        float drawRadius;
+        float hp;
+        float bodyDmg;
+        int   xp;
+        sf::Color fill, outline;
+    };
+
+    static Conf configFor(int t) {
+        if (t == 4) { return Conf{ 20.f, 30.f, 5.f, 10,  sf::Color(255,231,105), sf::Color(195,178, 80) }; }
+        else if (t == 3) { return Conf{ 25.f, 80.f, 8.f, 25, sf::Color(252,118,119), sf::Color(190, 90, 90) }; }
+        else { return Conf{ 40.f,160.f,12.f,100, sf::Color(118,141,252), sf::Color(96,112,189) }; }
     }
 
-    void DrawObs(sf::RenderWindow &window){
-        //shape.setPosition(body.position);
-        window.draw(shape);
+    Obstacle(float x, float y, float, float mapsize, int t)
+        : type(t),
+        body(x, y, mapsize, configFor(t).drawRadius* HITBOX_SCALE, configFor(t).hp, 0.f, configFor(t).bodyDmg),
+        xp_reward(configFor(t).xp) {
+        Conf c = configFor(t);
+        shape.setPointCount(static_cast<std::size_t>(t));
+        shape.setOutlineThickness(5.f);
+        shape.setRadius(c.drawRadius);
+        shape.setOrigin({ c.drawRadius, c.drawRadius });
+        shape.setPosition({ x, y });
+        shape.setFillColor(c.fill);
+        shape.setOutlineColor(c.outline);
+        float randomDeg = static_cast<float>(rand() % 360);
+        shape.setRotation(sf::degrees(randomDeg));
+    }
+
+    void update() {
+        if (!alive) return;
+        body.velocity *= friction;
+        if (std::abs(body.velocity.x) < 0.1f) body.velocity.x = 0.f;
+        if (std::abs(body.velocity.y) < 0.1f) body.velocity.y = 0.f;
+        body.update();
+        shape.setPosition(body.position);
+    }
+
+    void DrawObs(sf::RenderWindow& window) { if (alive) window.draw(shape); }
+
+    void respawn(float map_w, float map_h, const std::vector<Obstacle>& others, const Obj& tankBody) {
+        if(timeToRespawn<frame)
+            return;
+        bool ok = false;
+        sf::Vector2f p;
+        while (!ok) {
+            p.x = (float)((rand() % (int)(map_w * 2)) - (int)map_w);
+            p.y = (float)((rand() % (int)(map_h * 2)) - (int)map_h);
+            ok = true;
+            float dxT = p.x - tankBody.position.x;
+            float dyT = p.y - tankBody.position.y;
+            if (std::hypot(dxT, dyT) < (body.hitbox_r + tankBody.hitbox_r)) {
+                ok = false; 
+                continue; 
+            }
+            for (const auto& o : others) {
+                if (&o == this) continue;
+                if (!o.alive) continue;
+                float dx = p.x - o.body.position.x;
+                float dy = p.y - o.body.position.y;
+                if (std::hypot(dx, dy) < (body.hitbox_r + o.body.hitbox_r)) { 
+                    ok = false; 
+                    continue;
+                }
+            }
+        }
+        body.position = p;
+        body.hp = body.maxhp;
+        body.velocity = { 0.f, 0.f };
+        shape.setPosition(p);
+        shape.setRotation(sf::degrees((float)(rand() % 360)));
+        alive = true;
     }
 };
+void handleBulletObstacleCollision(std::vector<Bullet>& bullets, std::vector<Obstacle>& obstacles, MyTank& mytank) {
+    const float EPS = 1e-3f;
+    for (auto& bullet : bullets) {
+        if (!bullet.alive) continue;
+        for (auto& obs : obstacles) {
+            if (!obs.alive) continue;
+            if (bullet.body.isCollidingWith(obs.body)) {
+                float A = std::max(0.0f, obs.body.body_dmg);
+                float B = std::max(0.0f, bullet.body.body_dmg);
+                float a = std::max(0.0f, bullet.body.hp);
+                float b = std::max(0.0f, obs.body.hp);
+                if (A <= 0.f && B <= 0.f) { bullet.alive = false; break; }
+                float tb = (A > 0.f) ? (a / A) : std::numeric_limits<float>::infinity();
+                float to = (B > 0.f) ? (b / B) : std::numeric_limits<float>::infinity();
+                if (tb + 1e-6f < to) {
+                    float t = tb;
+                    bullet.body.hp = 0.f;
+                    obs.body.hp = std::max(EPS, b - B * t);
+                }
+                else if (to + 1e-6f < tb) {
+                    float t = to;
+                    obs.body.hp = 0.f;
+                    bullet.body.hp = std::max(EPS, a - A * t);
+                }
+                else {
+                    if (a >= b) {
+                        float t = to;
+                        obs.body.hp = 0.f;
+                        bullet.body.hp = std::max(EPS, a - A * t);
+                    }
+                    else {
+                        float t = tb;
+                        bullet.body.hp = 0.f;
+                        obs.body.hp = std::max(EPS, b - B * t);
+                    }
+                }
+                if (bullet.body.hp <= 0.f) bullet.alive = false;
+                if (obs.body.hp <= 0.f) {
+                    obs.alive = false;
+                    obs.timeToRespawn=frame;
+                    mytank.addScore(obs.xp_reward);
+                }
+                break;
+            }
+        }
+    }
+    for (int i = (int)bullets.size() - 1; i >= 0; --i) 
+        if (!bullets[i].alive) 
+            removeBullet(bullets, i);
+}
+void handleBulletTankCollision(std::vector<Bullet>& enemy_bullets, MyTank& tank) {
+    const float EPS = 1e-3f;
+    for (auto& bullet : enemy_bullets) {
+        if (!bullet.alive) 
+            continue;
+        if (bullet.body.isCollidingWith(tank.body) == false) 
+            continue;
+        float A = std::max(0.0f, tank.body.body_dmg);
+        float B = std::max(0.0f, bullet.body.body_dmg);
+        float a = std::max(0.0f, bullet.body.hp);
+        float b = std::max(0.0f, tank.body.hp);
+        if (A <= 0.f && B <= 0.f) { 
+            bullet.alive = false; 
+            continue; 
+        }
+        float tb = (A > 0.f) ? (a / A) : std::numeric_limits<float>::infinity();
+        float to = (B > 0.f) ? (b / B) : std::numeric_limits<float>::infinity();
+        if (tb + 1e-6f < to) {
+            float t = tb;
+            bullet.body.hp = 0.f;
+            tank.body.hp = std::max(EPS, b - B * t);
+        }
+        else if (to + 1e-6f < tb) {
+            float t = to;
+            tank.body.hp = 0.f;
+            bullet.body.hp = std::max(EPS, a - A * t);
+        }
+        else {
+            if (a >= b) {
+                float t = to;
+                tank.body.hp = 0.f;
+                bullet.body.hp = std::max(EPS, a - A * t);
+            }
+            else {
+                float t = tb;
+                bullet.body.hp = 0.f;
+                tank.body.hp = std::max(EPS, b - B * t);
+            }
+        }
+        if (bullet.body.hp <= 0.f) bullet.alive = false;
+    }
+}
+
 class XpBar{
 private:
     sf::RectangleShape xpBarBG;
@@ -655,18 +832,18 @@ public:
 
 int main(){
     srand(time(0));
+    int delay_click=0;
     int WIDTH = 900; // dài 
     int HEIGHT = 600; // rộng
     float acceleration = 0.7; // gia tốc
     float map_width=2000, map_height=2000;
-    int x=0,y=0;
     float bodysize=36;
 
     sf::ContextSettings settings;
     settings.antiAliasingLevel=4;
     bool fullscreen=false;
     sf::RenderWindow window(sf::VideoMode({WIDTH, HEIGHT}), "Diep",sf::Style::Default, sf::State::Windowed, settings);
-    window.setFramerateLimit(30);
+    window.setFramerateLimit(fps);
     sf::View mainview;
     mainview.setSize({(float)WIDTH, (float)HEIGHT});
     mainview.setSize({1350,900});
@@ -683,13 +860,16 @@ int main(){
         return -1;
 
 
-    MyTank mytank(x,y,bodysize,map_width);
+    MyTank mytank(0,0,bodysize,map_width);
     Minimap minimap(WIDTH,HEIGHT,120,{map_width,map_height});
     XpBar xpbar(WIDTH, HEIGHT, {400, 10}, mytank, SupercellMagic);
     StatsBar statsbar(SupercellMagic, WIDTH, HEIGHT);
     Line line(map_width,map_height);
+
     std::vector<Obstacle> obs;
     std::vector<Bullet> bullets;
+    std::vector<Bullet> enemy_bullets;
+
     for(int i=0;i<100;i++){
         int type=rand()%3+3;
         float x, y;
@@ -697,11 +877,12 @@ int main(){
         do{
             x = rand()%(int)(map_width*2)-map_width;
             y = rand()%(int)(map_height*2)-map_height;
-        }while (std::hypot(x, y) <= 200);
-        obs.push_back(Obstacle(x,y,type*10,map_width,type));
+        }while (std::hypot(x, y) <= 200.f);
+        obs.push_back(Obstacle(x,y,0.f,map_width,type));
     }
    
-    int angle=1;
+    int angle=0;
+
     while(window.isOpen()){
         while (const std::optional event = window.pollEvent()){
             if (event->is<sf::Event::Closed>()){
@@ -710,14 +891,15 @@ int main(){
             else if (const auto* keyPressed = event->getIf<sf::Event::KeyPressed>()){
                 if (keyPressed->scancode == sf::Keyboard::Scancode::Escape)
                     window.close();
-                    if (keyPressed->scancode == sf::Keyboard::Scancode::R){
-                        mytank.addScore(100);
-                        mytank.levelUp();
-                    }
-                    if (keyPressed->scancode == sf::Keyboard::Scancode::T){
-                        mytank.score = 0;
-                        mytank.levelUp();
-                    }
+                if (keyPressed->scancode == sf::Keyboard::Scancode::R){
+                    mytank.addScore(100);
+                    mytank.levelUp();
+                }
+                if (keyPressed->scancode == sf::Keyboard::Scancode::T){
+                    mytank.score = 0;
+                    mytank.stats={0,0,0,0,0,0,0,7};
+                    mytank.levelUp();
+                }
             }
         }
         // di chuyển 
@@ -733,58 +915,91 @@ int main(){
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)){
             mytank.moveX(acceleration);
         }
+
         // tính góc nòng súng
         sf::Vector2i mousePos = sf::Mouse::getPosition(window);
         int dx=mousePos.x-window.getSize().x/2, dy=mousePos.y-window.getSize().y/2;
         angle=atan2(dy,dx)*180/3.14;
+
         // Shooting
         if((sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))){
             mytank.shoot(bullets, angle);
         }
+
         // Chọn nâng cấp
-        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && statsbar.isVisible()){
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && statsbar.isVisible() && delay_click==0){
             int statIndex = statsbar.checkButtonClick(mousePos);
             if(statIndex != -1){
                 mytank.upgradeStat(statIndex);
             }
+            delay_click=10;
         }
-            
+        delay_click=std::max(0,delay_click-1);
+
         std::stringstream ss;
 
         mytank.update(angle);
-        mytank.levelUp();
         xpbar.update(mytank);
         statsbar.update(mytank);
+
         // ss << "Mouse pos: " <<mousePos.x <<" "<<mousePos.y<<"\n"<<"angle: "<<angle << '\n'<< "Tank pos: " << mytank.body.position.x << ' ' << mytank.body.position.y << '\n' << "tank speed: " << mytank.body.velocity.x << ' ' << mytank.body.velocity.y<<'\n'<<"window size: "<<window.getSize().x <<' ' << window.getSize().y;
         ss << "Level: " << mytank.level << '\n'<< "Score: " << mytank.score << '\n' << "Xp_base: " << mytank.xp_base << "/" << mytank.xp_to_lv_up << '\n'<< "HP: " << (int)mytank.body.hp << "/" << (int)mytank.body.maxhp;
         ss << "HP_regen: " << mytank.body.hp_regen << '\n' << "Body_dmg: " << mytank.body.body_dmg << '\n' << "Move Speed: " << mytank.velocity_max << '\n';
         // ss << "Reload: " << mytank.tankBasic->gun.reload;
         ss << '\n' << "bSpeed: " << mytank.getBulletSpeed() << '\n' << "bLife: " << mytank.getBulletLife() << '\n' << "bDmg: " << mytank.getBulletDamage() << '\n';
         text.setString(ss.str());      
-
-        window.clear(sf::Color(204, 204, 204));
-        mainview.setCenter(mytank.body.position);
-        window.setView(mainview);
         
-        line.draw(window);
+        
         
         for (int i = bullets.size() - 1; i >= 0; --i) {
             bullets[i].update();
-            if (bullets[i].alive)
-                bullets[i].draw(window);
-            else
+            if (!bullets[i].alive)
                 removeBullet(bullets, i);
         }       
-        for(int i=0;i<100;i++)
-            obs[i].DrawObs(window);
-        mytank.Drawtank(window); 
+        for (auto& o : obs) {
+            o.update();
+            if (!o.alive) continue;
+            if(mytank.body.isCollidingWith(o.body)){
+                mytank.body.handleCollisionWith(o.body);
+                
+                o.shape.setPosition(o.body.position);
+                mytank.bodyShape.setPosition(mytank.body.position);
+                if (mytank.getTankType() == 0) 
+                    mytank.tankBasic->gun.update(mytank.body.position, angle);
+                else 
+                    mytank.tankTwin->update(mytank.body.position, (float)angle);
+            }
+            if (o.body.hp <= 0.f) { 
+                o.alive = false;
+                mytank.addScore(o.xp_reward);
+                mytank.levelUp();
+                o.timeToRespawn=frame+fps*30;
+            }
+        }
+        handleBulletObstacleCollision(bullets, obs, mytank);
+        handleBulletTankCollision(enemy_bullets, mytank);
 
+        for (auto& o : obs) 
+            if (!o.alive) 
+                o.respawn(map_width, map_height, obs, mytank.body);
+
+        window.clear(sf::Color(204, 204, 204));
+
+        mainview.setCenter(mytank.body.position);
+        window.setView(mainview);
+        line.draw(window);
+        for (auto& b : bullets) b.draw(window);
+        for (auto& o : obs) o.DrawObs(window);
+        mytank.Drawtank(window); 
+        
         window.setView(window.getDefaultView());
         statsbar.draw(window,SupercellMagic);
         xpbar.draw(window);
         minimap.Drawmap(window,mytank.body.position);
         window.draw(text);
+
         window.display();
+        frame++;
     }
 
     return 0;
