@@ -30,9 +30,9 @@ void TankBasic::drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape){
 void TankBasic::update(sf::Vector2f pos, int angle){
     gun.update(pos, angle);
 }
-void TankBasic::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg){
+void TankBasic::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type){
     if (gun.delay == 0){
-        bullets.push_back(Bullet(gun.position,angle,gun.size.y/2,bSpeed,bLife,bDmg));
+        bullets.push_back(Bullet(gun.position,angle,gun.size.y/2,bSpeed,bLife,bDmg,type));
         gun.delay = gun.reload;
     }
 }
@@ -46,14 +46,14 @@ void TankTwin::update(sf::Vector2f pos, float angle){
     gun1.update(posGun1, angle);
     gun2.update(posGun2, angle);
 }
-void TankTwin::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg){
+void TankTwin::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type){
     if (gunToggle == 0 && gun1.delay == 0){
-        bullets.push_back(Bullet(gun1.position,angle,gun1.size.y/2,bSpeed,bLife,bDmg));
+        bullets.push_back(Bullet(gun1.position,angle,gun1.size.y/2,bSpeed,bLife,bDmg,type));
         gun1.delay = gun1.reload;
         gunToggle = 1;
     }
     if (gunToggle == 1 && gun2.delay == 0){
-            bullets.push_back(Bullet(gun2.position,angle,gun2.size.y/2,bSpeed,bLife,bDmg));
+            bullets.push_back(Bullet(gun2.position,angle,gun2.size.y/2,bSpeed,bLife,bDmg,type));
         gun2.delay = gun2.reload;
         gunToggle = 0;
     }
@@ -64,7 +64,8 @@ void TankTwin::drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape){
     window.draw(bodyShape);
 }
 
-MyTank::MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size,100, 0.2f, 2),score(0),level(1), xp_base(0), xp_to_lv_up(30), tankType(0), tankTwin(nullptr), statPoint(0){
+MyTank::MyTank(float x, float y, float size,float mapsize)
+    : body(x,y,mapsize,size,100, 0.2f, 2),score(0),level(1), xp_base(0), xp_to_lv_up(30), tankType(0), tankTwin(nullptr), statPoint(0){
     bodyShape.setRadius(size);
     bodyShape.setFillColor(sf::Color(0,178,225));
     bodyShape.setOutlineThickness(5.f);
@@ -122,9 +123,9 @@ void MyTank::addScore(int point){
     score += point;
 }
 void MyTank::levelUp(){
-    if (score >= xp_to_lv_up){
+    while (score >= xp_to_lv_up){
         level += 1;
-        int temp=(xp_to_lv_up-xp_base)*(1.5-level/10);
+        int temp=(xp_to_lv_up-xp_base)*(std::max(1.35-level/10,1.05));
         xp_base = xp_to_lv_up;
         xp_to_lv_up += temp;
         statPoint += 1;
@@ -147,7 +148,7 @@ float MyTank::getBulletSpeed(){
     return base_bullet_speed * (1 + stats.bullet_speed * 0.15f);
 }
 int MyTank::getBulletLife(){
-    return base_bullet_life + stats.bullet_penetration * 20;
+    return base_bullet_life + stats.bullet_penetration * 30;
 }
 float MyTank::getBulletDamage(){
     return base_bullet_dmg * (1 + stats.bullet_dmg * 0.2f);
@@ -236,16 +237,93 @@ bool MyTank::upgradeStat(int statIndex){
 }
 void MyTank::shoot(std::vector<Bullet> &bullets, int angle){
     float bSpeed = base_bullet_speed * (1 + stats.bullet_speed * 0.15f);
-    int bLife = base_bullet_life + stats.bullet_penetration * 15;
-    float bDmg = base_bullet_dmg * (1 + stats.bullet_dmg * 0.2f);
+    int bLife = base_bullet_life + stats.bullet_penetration * 30;
+    float bDmg = base_bullet_dmg * (1 + stats.bullet_dmg * 0.4f);
 
     if (tankType == 0){
-        tankBasic->shoot(bullets, angle, bSpeed, bLife, bDmg);
+        tankBasic->shoot(bullets, angle, bSpeed, bLife, bDmg,0);
     }
     else if (tankType == 1){
-        tankTwin->shoot(bullets, angle, bSpeed, bLife, bDmg);
+        tankTwin->shoot(bullets, angle, bSpeed, bLife, bDmg,0);
     }
 }
 int MyTank::getTankType(){
     return tankType;
 }
+
+
+EnemyTank::EnemyTank(float x, float y, float size, float mapsize,int tankType)
+    : body(x,y,mapsize,size,100,0.2f,2),tankType(tankType){
+    bodyShape.setRadius(size);
+    bodyShape.setFillColor(sf::Color(239,77,85));
+    bodyShape.setOutlineThickness(5.f);
+    bodyShape.setOutlineColor(sf::Color(205,65,70));
+    bodyShape.setOrigin({size,size});
+    bodyShape.setPosition({x,y});
+    body.position={x,y};
+    body.velocity={0,0};
+    friction=0.94;
+    if(tankType==0)
+        tankBasic = new TankBasic(x, y, size);
+    else if(tankType == 1)
+        tankTwin = new TankTwin(x,y,size);
+}
+EnemyTank::~EnemyTank(){
+    if (tankBasic) delete tankBasic;
+    if (tankTwin) delete tankTwin;
+}
+void EnemyTank::update(int angle){
+
+    body.velocity*=friction;
+
+    if(body.velocity.x<0.01 && body.velocity.x>-0.01)
+        body.velocity.x=0;
+    if(body.velocity.y<0.01 && body.velocity.y>-0.01)
+        body.velocity.y=0;
+    body.update();
+
+    if (tankType == 0){
+        tankBasic->update(body.position, angle);
+    }
+    else if (tankType == 1){
+        tankTwin->update(body.position, angle);
+    }
+    bodyShape.setPosition(body.position);
+}
+float EnemyTank::getBulletSpeed(){
+    return base_bullet_speed * (1 + stats.bullet_speed * 0.15f);
+}
+int EnemyTank::getBulletLife(){
+    return base_bullet_life + stats.bullet_penetration * 30;
+}
+float EnemyTank::getBulletDamage(){
+    return base_bullet_dmg * (1 + stats.bullet_dmg * 0.2f);
+}
+void EnemyTank::Drawtank(sf::RenderWindow &window){
+    if (tankType == 0){
+        tankBasic->drawTank(window, bodyShape);
+    }
+    else if (tankType == 1){
+        tankTwin->drawTank(window, bodyShape);
+    }
+}
+void EnemyTank::shoot(std::vector<Bullet> &bullets, int angle){
+    float bSpeed = base_bullet_speed * (1 + stats.bullet_speed * 0.15f);
+    int bLife = base_bullet_life + stats.bullet_penetration * 30;
+    float bDmg = base_bullet_dmg * (1 + stats.bullet_dmg * 0.4f);
+
+    if (tankType == 0){
+        tankBasic->shoot(bullets, angle, bSpeed, bLife, bDmg,1);
+    }
+    else if (tankType == 1){
+        tankTwin->shoot(bullets, angle, bSpeed, bLife, bDmg,1);
+    }
+}
+int EnemyTank::getTankType(){
+    return tankType;
+}
+
+
+
+
+

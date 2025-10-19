@@ -1,11 +1,11 @@
 #include "Bullet.hpp"
 
-Bullet::Bullet(sf::Vector2f pos, float angle,float size,float speed,int timetodie, float dmg)
+Bullet::Bullet(sf::Vector2f pos, float angle,float size,float speed,int timetodie, float dmg,int type)
     : body(pos.x, pos.y, 2000, size, 10, 0, dmg), timetodie(timetodie), alive(true){
     shape.setRadius(size);
-    shape.setFillColor(sf::Color(0,178,225));
+    shape.setFillColor(type==0? sf::Color(0,178,225): sf::Color(239,77,85));
     shape.setOutlineThickness(3.f);
-    shape.setOutlineColor(sf::Color(14, 144, 178));
+    shape.setOutlineColor(type == 0 ? sf::Color(14, 144, 178): sf::Color(205,65,70));
     shape.setOrigin({size,size});
     shape.setPosition(pos);
     body.velocity.x=speed * cos(angle*3.14/180);

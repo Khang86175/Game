@@ -29,7 +29,7 @@ void Obj::setHpRegen(float new_hp_regen){
 void Obj::setBodyDmg(float new_body_dmg){
     body_dmg = new_body_dmg;
 }
-void Obj::handleCollisionWith(Obj& other,bool instant,bool bounce ,float bounceScale ) {
+void Obj::handleCollisionWith(Obj& other,bool instant,bool bounce ,float bounceScale,int dmging) {
     float dx = position.x - other.position.x;
     float dy = position.y - other.position.y;
     float dist = std::hypot(dx, dy);
@@ -42,8 +42,8 @@ void Obj::handleCollisionWith(Obj& other,bool instant,bool bounce ,float bounceS
     if(instant == false){
         position += dir * (overlap * 0.5f);
         other.position -= dir * (overlap * 0.5f);
-        hp = std::max(0.f, hp - other.body_dmg);
-        other.hp = std::max(0.f, other.hp - body_dmg);
+        hp = std::max(0.f, hp - other.body_dmg*dmging);
+        other.hp = std::max(0.f, other.hp - body_dmg*dmging);
     }
     else {
         int time_collosions=std::min(std::ceil(hp/other.body_dmg),std::ceil(other.hp/body_dmg));

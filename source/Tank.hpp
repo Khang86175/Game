@@ -1,6 +1,8 @@
 #pragma once
 #include "Objects.hpp"
 #include "Bullet.hpp"
+#include "Globals.hpp"
+#include <algorithm>
 
 class Cannon{
 public:
@@ -22,7 +24,7 @@ public:
     TankBasic(float x, float y, float size);
     void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
     void update(sf::Vector2f pos, int angle);
-    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
 };
 class TankTwin{
 public:
@@ -32,14 +34,12 @@ public:
 
     TankTwin(float x, float y, float size);
     void update(sf::Vector2f pos, float angle);
-    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
     void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
 };
 class MyTank{
 public:
     Obj body;
-    // Cannon gun;
-    //float dpos;
     float friction;
     float acceleration = 0.25;
     sf::CircleShape bodyShape;
@@ -58,8 +58,8 @@ public:
     float base_maxhp = 100;
     float base_body_dmg = 2;
     float base_bullet_speed = 4;
-    int base_bullet_life = 50;
-    float base_bullet_dmg = 10;
+    int base_bullet_life = fps*5;
+    float base_bullet_dmg = 3;
     int base_reload = 60;
     float base_acceleration = 0.25;
 
@@ -76,6 +76,38 @@ public:
     void moveX(float dx);
     void moveY(float dy);
     bool upgradeStat(int statIndex);
+    void shoot(std::vector<Bullet> &bullets, int angle);
+    int getTankType();
+};
+
+class EnemyTank{
+public:
+    Obj body;
+    float friction;
+    float acceleration;
+    sf::CircleShape bodyShape;
+    Stats stats; 
+    int tankType;
+
+    TankBasic *tankBasic;
+    TankTwin *tankTwin;
+
+    float base_hp_regen = 0.1f;
+    float base_maxhp = 100;
+    float base_body_dmg = 2;
+    float base_bullet_speed = 4;
+    int base_bullet_life = fps*5;
+    float base_bullet_dmg = 3;
+    int base_reload = 60;
+    float base_acceleration = 0.25;
+
+    EnemyTank(float x, float y, float size,float mapsize,int tanktype);
+    ~EnemyTank();
+    void update(int angle);
+    float getBulletSpeed();
+    int getBulletLife();
+    float getBulletDamage();
+    void Drawtank(sf::RenderWindow &window);
     void shoot(std::vector<Bullet> &bullets, int angle);
     int getTankType();
 };

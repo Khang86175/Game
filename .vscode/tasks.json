@@ -16,7 +16,8 @@
                 "-lsfml-window",
                 "-lsfml-system",
                 "-o",
-                "main.exe"                       // file xuất ra trong thư mục gốc
+                "Diepio.exe",                       // file xuất ra trong thư mục gốc
+                "app_res.o"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"      // chạy lệnh trong thư mục gốc dự án

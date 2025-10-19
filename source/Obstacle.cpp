@@ -1,9 +1,9 @@
 #include "Obstacle.hpp"
 
 Obstacle::Conf Obstacle::configFor(int t) {
-    if (t == 4) { return Conf{ 20.f, 30.f, 5.f, 10,  sf::Color(255,231,105), sf::Color(195,178, 80) }; }
-    else if (t == 3) { return Conf{ 25.f, 80.f, 8.f, 25, sf::Color(252,118,119), sf::Color(190, 90, 90) }; }
-    else { return Conf{ 40.f,160.f,12.f,150, sf::Color(118,141,252), sf::Color(96,112,189) }; }
+    if (t == 4) { return Conf{ 20.f, 15.f, 2.5, 10,  sf::Color(255,231,105), sf::Color(195,178, 80) }; }
+    else if (t == 3) { return Conf{ 25.f, 40.f, 4.f, 25, sf::Color(252,118,119), sf::Color(190, 90, 90) }; }
+    else { return Conf{ 40.f,80.f,6.f,150, sf::Color(118,141,252), sf::Color(96,112,189) }; }
 }
 
 Obstacle::Obstacle(float x, float y, float mapsize, int t)

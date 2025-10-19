@@ -31,7 +31,6 @@ void handleBulletObstacleCollision(std::vector<Bullet>& bullets, std::vector<Obs
             removeBullet(bullets, i);
 }
 void handleBulletTankCollision(std::vector<Bullet>& enemy_bullets, MyTank& tank) {
-    const float EPS = 1e-3f;
     for (int i=0;i<enemy_bullets.size();i++) {
         if (!enemy_bullets[i].alive) 
             continue;
@@ -40,9 +39,26 @@ void handleBulletTankCollision(std::vector<Bullet>& enemy_bullets, MyTank& tank)
         enemy_bullets[i].body.handleCollisionWith(tank.body,true,true,0.5);
         if (enemy_bullets[i].body.hp <= 0.f){
             enemy_bullets[i].alive = false;
-            removeBullet(enemy_bullets,i);
         }
     }
+    for(int i=0;i<enemy_bullets.size();i++)
+        if(!enemy_bullets[i].alive)
+            removeBullet(enemy_bullets,i);
+}
+void handleBulletTankCollision(std::vector<Bullet>& my_bullets, EnemyTank& tank){
+    for (int i=0;i<my_bullets.size();i++) {
+        if (!my_bullets[i].alive) 
+            continue;
+        if (my_bullets[i].body.isCollidingWith(tank.body) == false) 
+            continue;
+        my_bullets[i].body.handleCollisionWith(tank.body,true,true,0.5);
+        if (my_bullets[i].body.hp <= 0.f){
+            my_bullets[i].alive = false;
+        }
+    }
+    for(int i=0;i<my_bullets.size();i++)
+        if(!my_bullets[i].alive)
+            removeBullet(my_bullets,i);
 }
 void handleBullet_BulletCollision(std::vector<Bullet>& my_bullets,std::vector<Bullet>& enemy_bullets){
     for(int i=0;i<my_bullets.size();i++){
@@ -50,6 +66,8 @@ void handleBullet_BulletCollision(std::vector<Bullet>& my_bullets,std::vector<Bu
             continue;
         for(int j=0;j<enemy_bullets.size();j++){
             if(enemy_bullets[j].alive == false)
+                continue;
+            if(!my_bullets[i].body.isCollidingWith(enemy_bullets[j].body))
                 continue;
             my_bullets[i].body.handleCollisionWith(enemy_bullets[j].body,true,false);
             if(my_bullets[i].body.hp == 0){
@@ -81,6 +99,23 @@ void handleTankObstacleCollision(MyTank &tank,std::vector<Obstacle> & obs){
                 obs[i].timeToRespawn=currentFrame+fps*30;
             }
             return;
+        }
+    }
+}
+void handle2TankCollision(MyTank& my_tank,EnemyTank& enemy_tank){
+    if(!my_tank.body.isCollidingWith(enemy_tank.body))
+        return;
+    my_tank.body.handleCollisionWith(enemy_tank.body,false,true,1);
+}
+void handle2ObstacleCollision(std::vector<Obstacle>& obs){
+    for(int i=0;i<obs.size();i++){
+        if(!obs[i].alive)
+            continue;
+        for(int j=i+1;j<obs.size();j++){
+            if(!obs[j].alive)
+                continue;
+            if(obs[i].body.isCollidingWith(obs[j].body))
+                obs[i].body.handleCollisionWith(obs[j].body,false,true,1,0);
         }
     }
 }

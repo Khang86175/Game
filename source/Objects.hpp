@@ -36,6 +36,6 @@ public:
     void setMaxHp(float new_maxhp);
     void setHpRegen(float new_hp_regen);
     void setBodyDmg(float new_body_dmg);
-    void handleCollisionWith(Obj& other,bool instant=true,bool bounce = true,float bounceScale =1);
+    void handleCollisionWith(Obj& other,bool instant=true,bool bounce = true,float bounceScale =1,int dmging=1);
     bool isCollidingWith(const Obj& other) const;
 };
