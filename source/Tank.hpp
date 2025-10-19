@@ -39,9 +39,9 @@ class MyTank{
 public:
     Obj body;
     // Cannon gun;
-    float velocity_max;
     //float dpos;
     float friction;
+    float acceleration = 0.25;
     sf::CircleShape bodyShape;
     int xp_base, xp_to_lv_up;
     int score;
@@ -54,14 +54,14 @@ public:
     TankTwin *tankTwin;
 
     // Base stats
-    float base_hp_regen = 0.2f;
+    float base_hp_regen = 0.1f;
     float base_maxhp = 100;
     float base_body_dmg = 2;
-    float base_bullet_speed = 8;
+    float base_bullet_speed = 4;
     int base_bullet_life = 50;
     float base_bullet_dmg = 10;
-    int base_reload = 30;
-    float base_move_speed = 6;
+    int base_reload = 60;
+    float base_acceleration = 0.25;
 
     MyTank(float x, float y, float size,float mapsize);
     ~MyTank();

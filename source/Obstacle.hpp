@@ -10,7 +10,7 @@ public:
     int xp_reward;
     bool alive{ true };
     int timeToRespawn=0;
-    float friction{ 0.9f };
+    float friction{ 0.94f };
 
     struct Conf {
         float drawRadius;

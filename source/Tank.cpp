@@ -73,8 +73,7 @@ MyTank::MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size
     bodyShape.setPosition({x,y});
     body.position={x,y};
     body.velocity={0,0};
-    velocity_max=6;
-    friction=0.9;
+    friction=0.94;
     tankBasic = new TankBasic(x, y, size);
 }
 MyTank::~MyTank(){
@@ -85,16 +84,15 @@ void MyTank::update(int angle){
     // hàm clamp giới hạn tốc độ
     // hàm hypot(x,y) = sqrt(x*x+y*y)
     body.velocity*=friction;
-    body.velocity.x=std::clamp(body.velocity.x,-velocity_max,velocity_max);
-    body.velocity.y=std::clamp(body.velocity.y,-velocity_max,velocity_max);
+
     //dpos=std::hypot(body.velocity.x,body.velocity.y);
     //if(dpos>velocity_max){
     //    body.velocity.x=body.velocity.x/dpos*velocity_max;
     //    body.velocity.y=body.velocity.y/dpos*velocity_max;
     //}
-    if(body.velocity.x<0.1 && body.velocity.x>-0.1)
+    if(body.velocity.x<0.01 && body.velocity.x>-0.01)
         body.velocity.x=0;
-    if(body.velocity.y<0.1 && body.velocity.y>-0.1)
+    if(body.velocity.y<0.01 && body.velocity.y>-0.01)
         body.velocity.y=0;
     body.update();
 
@@ -107,10 +105,10 @@ void MyTank::update(int angle){
     bodyShape.setPosition(body.position);
 }
 void MyTank::applyStats(){
-    body.setHpRegen(base_hp_regen * (1+stats.hp_regen*0.3f));
+    body.setHpRegen(base_hp_regen * (1+stats.hp_regen*0.15f));
     body.setMaxHp(base_maxhp * (1+stats.maxhp*0.2f));
     body.setBodyDmg(base_body_dmg * (1+stats.body_dmg*0.25f));
-    velocity_max = base_move_speed * (1+stats.move_speed*0.05f);
+    acceleration = base_acceleration * (1+stats.move_speed*0.06f);
     float newReload = base_reload - stats.reload*2;
     if (tankType == 0){
         tankBasic->gun.setReload(newReload);
@@ -162,11 +160,11 @@ void MyTank::Drawtank(sf::RenderWindow &window){
         tankTwin->drawTank(window, bodyShape);
     }
 }
-void MyTank::moveX(float dx){
-    body.velocity.x+=dx;
+void MyTank::moveX(float dir){
+    body.velocity.x+=acceleration*dir;
 }
-void MyTank::moveY(float dy){
-    body.velocity.y+=dy;
+void MyTank::moveY(float dir){
+    body.velocity.y+=acceleration*dir;
 }
 bool MyTank::upgradeStat(int statIndex){
     if (statPoint <= 0) return false;

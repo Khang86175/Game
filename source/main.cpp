@@ -1,9 +1,5 @@
 #include <SFML/Graphics.hpp>
-#include <sstream>
-#include <cmath>
-#include <algorithm>
-#include <iostream>
-#include <ctime>
+
 
 #include "Objects.hpp"
 #include "Bullet.hpp"
@@ -17,7 +13,6 @@
 int main(){
     srand(time(0));
     int delay_click=0;
-    float acceleration = 0.7; // gia tốc
     float bodysize=36;
 
     sf::ContextSettings settings;
@@ -84,16 +79,16 @@ int main(){
         }
         // di chuyển 
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)){
-            mytank.moveY(-acceleration);
+            mytank.moveY(-1);
         }
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)){
-            mytank.moveY(acceleration);
+            mytank.moveY(1);
         }
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)){
-            mytank.moveX(-acceleration);
+            mytank.moveX(-1);
         }
         if(sf::Keyboard::isKeyPressed(sf::Keyboard::Key::D) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)){
-            mytank.moveX(acceleration);
+            mytank.moveX(1);
         }
 
         // tính góc nòng súng
@@ -112,9 +107,10 @@ int main(){
             if(statIndex != -1){
                 mytank.upgradeStat(statIndex);
             }
-            delay_click=10;
+            delay_click=15;
         }
-        delay_click=std::max(0,delay_click-1);
+        if(delay_click >0)
+            delay_click--;
 
         std::stringstream ss;
 
@@ -124,7 +120,6 @@ int main(){
 
         // ss << "Mouse pos: " <<mousePos.x <<" "<<mousePos.y<<"\n"<<"angle: "<<angle << '\n'<< "Tank pos: " << mytank.body.position.x << ' ' << mytank.body.position.y << '\n' << "tank speed: " << mytank.body.velocity.x << ' ' << mytank.body.velocity.y<<'\n'<<"window size: "<<window.getSize().x <<' ' << window.getSize().y;
         ss << "Level: " << mytank.level << '\n'<< "Score: " << mytank.score << '\n' << "Xp_base: " << mytank.xp_base << "/" << mytank.xp_to_lv_up << '\n'<< "HP: " << (int)mytank.body.hp << "/" << (int)mytank.body.maxhp;
-        ss << "HP_regen: " << mytank.body.hp_regen << '\n' << "Body_dmg: " << mytank.body.body_dmg << '\n' << "Move Speed: " << mytank.velocity_max << '\n';
         // ss << "Reload: " << mytank.tankBasic->gun.reload;
         ss << '\n' << "bSpeed: " << mytank.getBulletSpeed() << '\n' << "bLife: " << mytank.getBulletLife() << '\n' << "bDmg: " << mytank.getBulletDamage() << '\n';
         text.setString(ss.str());      
