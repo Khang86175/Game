@@ -1,0 +1,9 @@
+18/10/2025
+sửa hàm handleCollisionWith thành void
+tối ưu hàm handleCollisionWith để có thể dùng mọi trường hợp va chạm giữa 2 Obj
+tối ưu thuật toán va chạm 2 Obj
+chỉnh sửa lại chỉ số của tank, Obstacle hợp lí
+tối ưu hàm handleBulletObstacleCollision,handleBulletTankCollision
+thêm hàm handleBullet_BulletCollision,handleTankObstacleCollision
+tăng delay khi nâng cấp chỉ số
+tối ưu khi cập nhật các Obj, tank, obs,..
