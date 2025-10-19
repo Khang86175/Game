@@ -1,5 +1,18 @@
 #include "Tank.hpp"
 
+bool canEvolveTo(TankType currentType, TankType targetType){
+    if (currentType == TankType::BASIC) {
+        return (targetType == TankType::TWIN || targetType == TankType::SNIPER || targetType == TankType::MACHINE_GUN);
+    }
+    if (currentType == TankType::TWIN) return targetType == TankType::TRIPLE;
+    if (currentType == TankType::SNIPER) return targetType == TankType::ASSASSIN;
+    if (currentType == TankType::MACHINE_GUN) return targetType == TankType::DESTROYER;
+    return false;
+}
+bool isMaxEvolution(TankType type){
+    return (type == TankType::TRIPLE || type == TankType::ASSASSIN || type == TankType::DESTROYER);
+}
+
 Cannon::Cannon(float x, float y,float size, float reload):position({x,y}),angle(0),delay(0), reload(reload), size(size*2, size*2/3){
     gun.setSize({size*2, size*2/3});
     gun.setFillColor(sf::Color(153,153,153));
@@ -20,7 +33,37 @@ void Cannon::DrawGun(sf::RenderWindow &window){
 }
 void Cannon::setReload(int new_reload){
     reload = new_reload;
-}  
+}
+MachineGunCannon::MachineGunCannon(float x, float y,float size, float reload):position({x,y}),angle(0),delay(0), reload(reload), size(size*1.2, size*1.8){
+    gun.setPointCount(4);
+    float length = size * 1.8f;
+    float backWidth = size*0.7;
+    float frontWidth = size * 1.2f;
+    gun.setPoint(0, sf::Vector2f(0, -backWidth/2));
+    gun.setPoint(1, sf::Vector2f(length, -frontWidth));
+    gun.setPoint(1, sf::Vector2f(length, frontWidth));
+    gun.setPoint(3, sf::Vector2f(0, backWidth/2));
+
+    gun.setFillColor(sf::Color(153,153,153));
+    gun.setOutlineThickness(5.f);
+    gun.setOutlineColor(sf::Color(102,102,102));
+    gun.setOrigin({0,size/3});
+    gun.setPosition({x,y});
+}
+
+void MachineGunCannon::update(sf::Vector2f pos, int angle){
+    if(delay>0)
+        delay-=1;
+    position=pos;
+    gun.setPosition(pos);
+    gun.setRotation(sf::degrees(angle));
+}
+void MachineGunCannon::DrawGun(sf::RenderWindow &window){
+    window.draw(gun);
+}
+void MachineGunCannon::setReload(int new_reload){
+    reload = new_reload;
+}
 
 TankBasic::TankBasic(float x, float y, float size) : gun(x,y,size, 30){}
 void TankBasic::drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape){
@@ -37,7 +80,7 @@ void TankBasic::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int
     }
 }
 
-TankTwin::TankTwin(float x, float y, float size): gun1(x, y, size, 30), gun2(x, y, size, 30), gunToggle(0), gunOffSet(size/2) {}
+TankTwin::TankTwin(float x, float y, float size): gun1(x, y, size, 30), gun2(x, y, size, 30), gunOffSet(size/2) {}
 void TankTwin::update(sf::Vector2f pos, float angle){
     float offSetX = gunOffSet * cos((angle + 90) * 3.14f / 180.f);
     float offsetY = gunOffSet * sin((angle + 90) * 3.14f / 180.f);
@@ -47,15 +90,11 @@ void TankTwin::update(sf::Vector2f pos, float angle){
     gun2.update(posGun2, angle);
 }
 void TankTwin::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg){
-    if (gunToggle == 0 && gun1.delay == 0){
+    if (gun1.delay == 0 && gun2.delay == 0){
         bullets.push_back(Bullet(gun1.position,angle,gun1.size.y/2,bSpeed,bLife,bDmg));
         gun1.delay = gun1.reload;
-        gunToggle = 1;
-    }
-    if (gunToggle == 1 && gun2.delay == 0){
-            bullets.push_back(Bullet(gun2.position,angle,gun2.size.y/2,bSpeed,bLife,bDmg));
+        bullets.push_back(Bullet(gun2.position,angle,gun2.size.y/2,bSpeed,bLife,bDmg));
         gun2.delay = gun2.reload;
-        gunToggle = 0;
     }
 }
 void TankTwin::drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape){
@@ -64,7 +103,93 @@ void TankTwin::drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape){
     window.draw(bodyShape);
 }
 
-MyTank::MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size,100, 0.2f, 2),score(0),level(1), xp_base(0), xp_to_lv_up(30), tankType(0), tankTwin(nullptr), statPoint(0){
+TankTriple::TankTriple(float x, float y, float size): gun1(x, y, size, 30), gun2(x, y, size, 30), gun3(x, y, size, 30), gunOffSet(size*0.6){}
+void TankTriple::update(sf::Vector2f pos, float angle){
+    float offSetX = gunOffSet * cos((angle + 90) * 3.14f / 180.f);
+    float offsetY = gunOffSet * sin((angle + 90) * 3.14f / 180.f);
+    sf::Vector2f posGun1(pos.x - offSetX, pos.y - offsetY);
+    sf::Vector2f posGun3(pos.x + offSetX, pos.y + offsetY);
+    gun1.update(posGun1, angle-45);
+    gun2.update(pos, angle);
+    gun3.update(posGun3, angle+45);
+}
+void TankTriple::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg){
+    if (gun1.delay == 0 && gun2.delay == 0, gun3.delay == 0){
+        bullets.push_back(Bullet(gun1.position,angle,gun1.size.y/2,bSpeed,bLife,bDmg));
+        gun1.delay = gun1.reload;
+        bullets.push_back(Bullet(gun2.position,angle,gun2.size.y/2,bSpeed,bLife,bDmg));
+        gun2.delay = gun2.reload;
+        bullets.push_back(Bullet(gun3.position,angle,gun3.size.y/2,bSpeed,bLife,bDmg));
+        gun2.delay = gun3.reload;
+    }
+}
+void TankTriple::drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape){
+    window.draw(bodyShape);
+    gun1.DrawGun(window);
+    gun2.DrawGun(window);
+    gun3.DrawGun(window);
+}
+
+TankMachineGun::TankMachineGun(float x, float y, float size) : gun(x, y, size, 25){}
+void TankMachineGun::update(sf::Vector2f pos, int angle) {
+    gun.update(pos, angle);
+}
+void TankMachineGun::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg) {
+    if (gun.delay == 0) {
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2, bSpeed * 1.3f, bLife * 1.5f, bDmg * 1.2f));
+        gun.delay = gun.reload;
+    }
+}
+void TankMachineGun::drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape) {
+    gun.DrawGun(window);
+    window.draw(bodyShape);
+}
+
+TankDestroyer::TankDestroyer(float x, float y, float size) : gun(x, y, size * 1.3f, 60) {}
+void TankDestroyer::update(sf::Vector2f pos, int angle) {
+    gun.update(pos, angle);
+}
+void TankDestroyer::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg) {
+    if (gun.delay == 0) {
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2 * 1.8f, bSpeed * 0.7f, bLife, bDmg * 2.f));
+        gun.delay = gun.reload;
+    }
+}
+void TankDestroyer::drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape) {
+    gun.DrawGun(window);
+    window.draw(bodyShape);
+}
+TankSniper::TankSniper(float x, float y, float size) : gun(x, y, size * 1.5f, 40){}
+void TankSniper::update(sf::Vector2f pos, int angle) {
+    gun.update(pos, angle);
+}
+void TankSniper::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg) {
+    if (gun.delay == 0) {
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2, bSpeed * 1.3f, bLife * 1.5f, bDmg * 1.2f));
+        gun.delay = gun.reload;
+    }
+}
+void TankSniper::drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape) {
+    gun.DrawGun(window);
+    window.draw(bodyShape);
+}
+
+TankAssassin::TankAssassin(float x, float y, float size) : gun(x, y, size * 1.8f, 40){}
+void TankAssassin::update(sf::Vector2f pos, int angle) {
+    gun.update(pos, angle);
+}
+void TankAssassin::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg) {
+    if (gun.delay == 0) {
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2, bSpeed * 1.3f, bLife * 1.8f, bDmg * 1.3f));
+        gun.delay = gun.reload;
+    }
+}
+void TankAssassin::drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape) {
+    gun.DrawGun(window);
+    window.draw(bodyShape);
+}
+
+MyTank::MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size,100, 0.2f, 2),score(0),level(1), xp_base(0), xp_to_lv_up(30), tankType(TankType::BASIC), tankTwin(nullptr), statPoint(0){
     bodyShape.setRadius(size);
     bodyShape.setFillColor(sf::Color(0,178,225));
     bodyShape.setOutlineThickness(5.f);
@@ -79,6 +204,11 @@ MyTank::MyTank(float x, float y, float size,float mapsize):body(x,y,mapsize,size
 MyTank::~MyTank(){
     if (tankBasic) delete tankBasic;
     if (tankTwin) delete tankTwin;
+    if (tankSniper) delete tankSniper;
+    if (tankMachineGun) delete tankMachineGun;
+    if (tankTriple) delete tankTriple;
+    if (tankAssassin) delete tankAssassin;
+    if (tankDestroyer) delete tankDestroyer;
 }
 void MyTank::update(int angle){
     // hàm clamp giới hạn tốc độ
@@ -96,11 +226,28 @@ void MyTank::update(int angle){
         body.velocity.y=0;
     body.update();
 
-    if (tankType == 0){
-        tankBasic->update(body.position, angle);
-    }
-    else if (tankType == 1){
-        tankTwin->update(body.position, angle);
+    switch (tankType) {
+        case TankType::BASIC:
+            if (tankBasic) tankBasic->update(body.position, angle);
+            break;
+        case TankType::TWIN:
+            if (tankTwin) tankTwin->update(body.position, angle);
+            break;
+        case TankType::SNIPER:
+            if (tankSniper) tankSniper->update(body.position, angle);
+            break;
+        case TankType::MACHINE_GUN:
+            if (tankMachineGun) tankMachineGun->update(body.position, angle);
+            break;
+        case TankType::TRIPLE:
+            if (tankTriple) tankTriple->update(body.position, angle);
+            break;
+        case TankType::ASSASSIN:
+            if (tankAssassin) tankAssassin->update(body.position, angle);
+            break;
+        case TankType::DESTROYER:
+            if (tankDestroyer) tankDestroyer->update(body.position, angle);
+            break;
     }
     bodyShape.setPosition(body.position);
 }
@@ -142,6 +289,54 @@ void MyTank::levelUp(){
         tankTwin = new TankTwin(body.position.x, body.position.y, bodyShape.getRadius());
         tankType = 1;
     }
+}
+bool MyTank::canEvolve() {
+    if (isMaxEvolution(tankType)) return false;
+    if (tankType == TankType::BASIC && level >= 10) return true;
+    if ((tankType == TankType::TWIN || tankType == TankType::SNIPER || tankType == TankType::MACHINE_GUN) && level >= 20) {
+        return true;
+    }
+    return false;
+}
+bool MyTank::evolveTank(TankType newType) {
+    if (!canEvolveTo(tankType, newType)) return false;
+    // Xóa tank cũ
+    if (tankBasic) { delete tankBasic; tankBasic = nullptr; }
+    if (tankTwin) { delete tankTwin; tankTwin = nullptr; }
+    if (tankSniper) { delete tankSniper; tankSniper = nullptr; }
+    if (tankMachineGun) { delete tankMachineGun; tankMachineGun = nullptr; }
+    if (tankTriple) { delete tankTriple; tankTriple = nullptr; }
+    if (tankAssassin) { delete tankAssassin; tankAssassin = nullptr; }
+    if (tankDestroyer) { delete tankDestroyer; tankDestroyer = nullptr; }
+
+    tankType = newType;
+    float radius = bodyShape.getRadius();
+    // Tạo tank mới
+    switch (newType) {
+        case TankType::BASIC:
+            tankBasic = new TankBasic(body.position.x, body.position.y, radius);
+            break;
+        case TankType::TWIN:
+            tankTwin = new TankTwin(body.position.x, body.position.y, radius);
+            break;
+        case TankType::SNIPER:
+            tankSniper = new TankSniper(body.position.x, body.position.y, radius);
+            break;
+        case TankType::MACHINE_GUN:
+            tankMachineGun = new TankMachineGun(body.position.x, body.position.y, radius);
+            break;
+        case TankType::TRIPLE:
+            tankTriple = new TankTriple(body.position.x, body.position.y, radius);
+            break;
+        case TankType::ASSASSIN:
+            tankAssassin = new TankAssassin(body.position.x, body.position.y, radius);
+            break;
+        case TankType::DESTROYER:
+            tankDestroyer = new TankDestroyer(body.position.x, body.position.y, radius);
+            break;
+    }
+    applyStats();
+    return true;
 }
 float MyTank::getBulletSpeed(){
     return base_bullet_speed * (1 + stats.bullet_speed * 0.15f);
