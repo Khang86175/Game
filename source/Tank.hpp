@@ -230,7 +230,7 @@ public:
     void shoot(std::vector<Bullet> &bullets, int angle);
     TankType getTankType();
     int NextMove(MyTank &target);
-    void NewEnemy(float x, float y, float size, TankType tankType,int level);
+    void NewEnemy(float x, float y, float size, TankType tanktype,int level);
     void Die(MyTank &myTank);
 };
 

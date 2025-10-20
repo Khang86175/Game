@@ -319,7 +319,7 @@ void MyTank::applyStats(){
     body.setHpRegen(base_hp_regen * (1+stats.hp_regen)*0.12f);
     body.setMaxHp(base_maxhp * pow(1.2,(1+stats.maxhp)));
     body.setBodyDmg(base_body_dmg * (1+stats.body_dmg)*0.2f);
-    acceleration = base_acceleration + (1+stats.move_speed)*0.06f;
+    acceleration = base_acceleration +stats.move_speed*0.02f;
     int newReload = base_reload - stats.reload*4;
     switch (tankType) {
         case TankType::BASIC:
@@ -595,7 +595,7 @@ void MyTank::reset(float x, float y, float size, float mapsize){
 
 // ENEMYTANK IS HERE
 EnemyTank::EnemyTank(float x, float y, float size, float mapsize,TankType tankType)
-    : body(x,y,mapsize,size,100,0.2f,2),tankType(tankType),hp_bar(50, 5, size+10),alive(false),Xp_reward(100),timetorespawn(3600){
+    : body(x,y,mapsize,size,100,0.2f,2),tankType(tankType),hp_bar(50, 5, size+10),alive(false),Xp_reward(100),timetorespawn(1800){
     bodyShape.setRadius(size);
     bodyShape.setFillColor(sf::Color(239,77,85));
     bodyShape.setOutlineThickness(5.f);
@@ -615,12 +615,14 @@ EnemyTank::EnemyTank(float x, float y, float size, float mapsize,TankType tankTy
     tankAssassin = nullptr;
     tankDestroyer = nullptr;
 }
-void EnemyTank::NewEnemy(float x, float y, float size, TankType tankType, int level){
+void EnemyTank::NewEnemy(float x, float y, float size, TankType tanktype, int level){
     Xp_reward=level*50;
     alive=true;
     bodyShape.setRadius(size);
+    bodyShape.setFillColor(sf::Color(239,77,85));
+    bodyShape.setOutlineThickness(5.f);
+    bodyShape.setOutlineColor(sf::Color(205,65,70));
     bodyShape.setOrigin({size,size});
-    bodyShape.setPosition({x,y});
     body.position={x,y};
     body.velocity={0,0};
 
@@ -632,27 +634,28 @@ void EnemyTank::NewEnemy(float x, float y, float size, TankType tankType, int le
     tankAssassin = nullptr;
     tankDestroyer = nullptr;
 
+    tankType=tanktype;
     switch (tankType) {
         case TankType::BASIC:
-            if (tankBasic) tankBasic = new TankBasic(x,y,size);
+            tankBasic = new TankBasic(x,y,size);
             break;
         case TankType::TWIN:
-            if (tankTwin) tankTwin = new TankTwin(x,y,size);
+            tankTwin = new TankTwin(x,y,size);
             break;
         case TankType::SNIPER:
-            if (tankSniper) tankSniper = new TankSniper(x,y,size);
+            tankSniper = new TankSniper(x,y,size);
             break;
         case TankType::MACHINE_GUN:
-            if (tankMachineGun) tankMachineGun = new TankMachineGun(x,y,size);
+            tankMachineGun = new TankMachineGun(x,y,size);
             break;
         case TankType::TRIPLE:
-            if (tankTriple) tankTriple = new TankTriple(x,y,size);
+            tankTriple = new TankTriple(x,y,size);
             break;
         case TankType::ASSASSIN:
-            if (tankAssassin) tankAssassin = new TankAssassin(x,y,size);
+            tankAssassin = new TankAssassin(x,y,size);
             break;
         case TankType::DESTROYER:
-            if (tankDestroyer) tankDestroyer = new TankDestroyer(x,y,size);
+            tankDestroyer = new TankDestroyer(x,y,size);
             break;
     }
     int base=level/10;
@@ -660,8 +663,11 @@ void EnemyTank::NewEnemy(float x, float y, float size, TankType tankType, int le
     baselevel+=base;
     body.setHpRegen((base_hp_regen * (1+stats.hp_regen+base)*0.12f)/2);
     body.setMaxHp(base_maxhp * pow(1.2,(1+stats.maxhp+base)));
+    body.hp=body.maxhp;
     body.setBodyDmg(base_body_dmg * (1+stats.body_dmg+base)*0.2f);
-    acceleration = base_acceleration * (1+stats.move_speed+base)*0.06f;
+    acceleration = base_acceleration + (stats.move_speed+base)*0.04f;
+    if(acceleration > 0.6)
+        acceleration = 0.6;
     int newReload = base_reload - stats.reload*4;
     switch (tankType) {
         case TankType::BASIC:
@@ -734,7 +740,7 @@ void EnemyTank::update(int angle){
     hp_bar.update(body);
 }
 float EnemyTank::getBulletSpeed(){
-    return base_bullet_speed * (1 + stats.bullet_speed * 0.15f);
+    return base_bullet_speed * (1 + stats.bullet_speed * 0.15f)*1.5;
 }
 int EnemyTank::getBulletLife(){
     return base_bullet_life + stats.bullet_penetration * 30;
@@ -770,13 +776,13 @@ void EnemyTank::Drawtank(sf::RenderWindow &window){
         hp_bar.draw(window);
 }
 void EnemyTank::shoot(std::vector<Bullet> &bullets, int angle){
-    float bSpeed = (base_bullet_speed * (1 + stats.bullet_speed+baselevel) * 0.15f)*2;
+    float bSpeed = (base_bullet_speed * (1 + stats.bullet_speed * 0.15f))*1.5;
     if(bSpeed > 15)
         bSpeed=15;
     int bLife = base_bullet_life + (stats.bullet_penetration+baselevel) * 30;
     if(bLife>600)
         bLife=600;
-    float bDmg = base_bullet_dmg * (1 + stats.bullet_dmg+baselevel) * 0.4f;
+    float bDmg = base_bullet_dmg * (1 + stats.bullet_dmg) * 0.4f;
 
     switch (tankType) {
         case TankType::BASIC:
@@ -806,7 +812,7 @@ TankType EnemyTank::getTankType(){
     return tankType;
 }
 void EnemyTank::Die(MyTank& myTank){
-    timetorespawn=currentFrame+fps*(rand()%120-60);
+    timetorespawn=currentFrame+fps*(rand()%60-30);
     alive=false;
     if (tankBasic) delete tankBasic;
     if (tankTwin) delete tankTwin;

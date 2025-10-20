@@ -18,6 +18,7 @@ int main() {
     srand((unsigned)time(nullptr));
     int delay_click = 0;
     float bodysize = 36;
+    bool getxp=true;
 
     sf::ContextSettings settings;
     settings.antiAliasingLevel = 4;
@@ -139,6 +140,7 @@ int main() {
         if (state == MENU) {
             if (start.checkStartClick(mousePos)&& delay_click == 0 ) {
                 state = PLAYING;
+                currentFrame=0;
                 playerName = start.getPlayerName();
                 gameOver = false;
                 delay_click=10;
@@ -244,6 +246,7 @@ int main() {
                     y = rand() % (int)(MapSize * 2) - MapSize;
                 } while (std::hypot(x-myTank.body.position.x, y-myTank.body.position.y) <= 500.f);
                 enemyTank.NewEnemy(x,y,bodysize,TankType(rand()%7),myTank.level);
+                getxp=true;
             }
             myTank.update(angle);
             xpbar.update(myTank);
@@ -286,8 +289,9 @@ int main() {
             handle2ObstacleCollision(obs);
             if(enemyTank.alive)
                 handleTankBotCollision(myTank,enemyTank);
-            if(enemyTank.body.hp <=0){
+            if(enemyTank.body.hp <=0 && getxp){
                 enemyTank.Die(myTank);
+                getxp=false;
             }
             if (myTank.body.hp <= 0) {
                 gameOver = true;
