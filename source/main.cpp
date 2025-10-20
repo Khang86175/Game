@@ -23,7 +23,7 @@ int main(){
     sf::View mainview;
     mainview.setSize({(float)WIDTH*1.5, (float)HEIGHT*1.5});
 
-     // tải font chữ
+    // tải font chữ
     sf::Font font;
     if(!font.openFromFile("arial.ttf"))
         return -1;
@@ -34,11 +34,13 @@ int main(){
     if(!SupercellMagic.openFromFile("Supercell-Magic Regular.ttf"))
         return -1;
 
-
     MyTank mytank(0,0,bodysize,MapSize);
     Minimap minimap(WIDTH,HEIGHT,120,MapSize);
     XpBar xpbar(WIDTH, HEIGHT, {400, 10}, mytank, SupercellMagic);
     StatsBar statsbar(SupercellMagic, WIDTH, HEIGHT);
+    TankEvolutionUI evolutionUI({WIDTH, HEIGHT});
+    if (!evolutionUI.loadTextures())
+        return -1;
     Line line(MapSize);
 
     std::vector<Obstacle> obs;
@@ -67,7 +69,7 @@ int main(){
                 if (keyPressed->scancode == sf::Keyboard::Scancode::Escape)
                     window.close();
                 if (keyPressed->scancode == sf::Keyboard::Scancode::R){
-                    mytank.addScore(100);
+                    mytank.addScore(10000);
                     mytank.levelUp();
                 }
                 if (keyPressed->scancode == sf::Keyboard::Scancode::T){
@@ -101,27 +103,39 @@ int main(){
             mytank.shoot(bullets, angle);
         }
 
-        // Chọn nâng cấp
-        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && statsbar.isVisible() && delay_click==0){
-            int statIndex = statsbar.checkButtonClick(mousePos);
-            if(statIndex != -1){
-                mytank.upgradeStat(statIndex);
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && delay_click == 0){
+            if (evolutionUI.isVisible()) {
+                TankType selected = evolutionUI.getSelectedEvolution(mousePos);
+                if (selected != mytank.getTankType()){
+                    if (mytank.evolveTank(selected)){
+                        evolutionUI.setVisible(false);
+                        delay_click = 15;
+                    }
+                }
             }
-            delay_click=15;
+            // Chọn nâng cấp
+            else if (statsbar.isVisible()) {
+                int statIndex = statsbar.checkButtonClick(mousePos);
+                if(statIndex != -1){
+                    mytank.upgradeStat(statIndex);
+                    delay_click = 15;
+                }
+            }
         }
-        if(delay_click >0)
+        if(delay_click > 0)
             delay_click--;
-
         std::stringstream ss;
 
         mytank.update(angle);
         xpbar.update(mytank);
+        evolutionUI.update(mytank);
         statsbar.update(mytank);
 
         // ss << "Mouse pos: " <<mousePos.x <<" "<<mousePos.y<<"\n"<<"angle: "<<angle << '\n'<< "Tank pos: " << mytank.body.position.x << ' ' << mytank.body.position.y << '\n' << "tank speed: " << mytank.body.velocity.x << ' ' << mytank.body.velocity.y<<'\n'<<"window size: "<<window.getSize().x <<' ' << window.getSize().y;
-        ss << "Level: " << mytank.level << '\n'<< "Score: " << mytank.score << '\n' << "Xp_base: " << mytank.xp_base << "/" << mytank.xp_to_lv_up << '\n'<< "HP: " << (int)mytank.body.hp << "/" << (int)mytank.body.maxhp;
+        // ss << "Level: " << mytank.level << '\n'<< "Score: " << mytank.score << '\n' << "Xp_base: " << mytank.xp_base << "/" << mytank.xp_to_lv_up << '\n'<< "HP: " << (int)mytank.body.hp << "/" << (int)mytank.body.maxhp;
         // ss << "Reload: " << mytank.tankBasic->gun.reload;
-        ss << '\n' << "bSpeed: " << mytank.getBulletSpeed() << '\n' << "bLife: " << mytank.getBulletLife() << '\n' << "bDmg: " << mytank.getBulletDamage() << '\n';
+        // ss << '\n' << "bSpeed: " << mytank.getBulletSpeed() << '\n' << "bLife: " << mytank.getBulletLife() << '\n' << "bDmg: " << mytank.getBulletDamage() << '\n';
+        ss << "evoUI visible: " << evolutionUI.isVisible();
         text.setString(ss.str());      
         
         
@@ -159,6 +173,7 @@ int main(){
         window.setView(window.getDefaultView());
         statsbar.draw(window,SupercellMagic);
         xpbar.draw(window);
+        evolutionUI.draw(window);
         minimap.Drawmap(window,mytank.body.position);
         window.draw(text);
 

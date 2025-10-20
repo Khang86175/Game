@@ -1,6 +1,6 @@
 #include "Bullet.hpp"
 
-Bullet::Bullet(sf::Vector2f pos, float angle,float size,float speed,int timetodie, float dmg)
+Bullet::Bullet(sf::Vector2f pos, float angle,float size,float gun_lenght,float speed,int timetodie, float dmg)
     : body(pos.x, pos.y, 2000, size, 10, 0, dmg), timetodie(timetodie), alive(true){
     shape.setRadius(size);
     shape.setFillColor(sf::Color(0,178,225));
@@ -10,7 +10,7 @@ Bullet::Bullet(sf::Vector2f pos, float angle,float size,float speed,int timetodi
     shape.setPosition(pos);
     body.velocity.x=speed * cos(angle*3.14/180);
     body.velocity.y=speed * sin(angle*3.14/180);
-    float gunLength = size*6+10;
+    float gunLength = gun_lenght+10;
     body.position.x = pos.x + gunLength * cos(angle * 3.14f / 180.f);
     body.position.y = pos.y + gunLength * sin(angle * 3.14f / 180.f);
     body.setBodyDmg(dmg);

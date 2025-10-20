@@ -7,7 +7,7 @@ float hypot2(const sf::Vector2f &x){
 
 
 Obj::Obj(float x, float y, float mapsize, float size, float maxhp, float hp_regen, float body_dmg)
-    : position({x, y}), velocity({0, 0}), mapsize(mapsize), hitbox_r(size), maxhp(maxhp), hp(maxhp), hp_regen(hp_regen), body_dmg(body_dmg) {}
+    : position({x, y}), velocity({0, 0}), mapsize(mapsize), hitbox_r(size), maxhp(maxhp), hp(maxhp), hp_regen(hp_regen), body_dmg(body_dmg){}
 void Obj::update(){
     position+=velocity;
     position.x=std::clamp(position.x,-mapsize+hitbox_r,mapsize-hitbox_r);

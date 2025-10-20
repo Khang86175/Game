@@ -1,7 +1,10 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <sstream>
+#include <iostream>
+#include <vector>
 #include "Tank.hpp"
+#include "Objects.hpp"
 
 class Minimap{
 public:
@@ -53,3 +56,56 @@ public:
     void draw(sf::RenderWindow &window, sf::Font &font);
     bool isVisible();
 };
+
+class Option {
+private:
+    TankType type;
+    sf::Sprite sprite;
+    // sf::FloatRect bounds;
+    // sf::Vector2f position;
+    // bool isClickable;
+public:
+    // sf::RectangleShape button;
+    Option(TankType t, sf::Texture &texture, sf::Vector2f pos);
+    // void setPosition(sf::Vector2f pos);
+    void draw(sf::RenderWindow &window);
+    TankType getType() { return type; }
+    bool checkButtonClick(sf::Vector2i mousePos);
+    // void setClickable(bool clickable) { isClickable = clickable; }
+    // bool getClickable() const { return isClickable; }
+    sf::Sprite& getSprite() { return sprite; }
+};
+class TankEvolutionUI {
+private:
+    std::vector<Option> options;
+    bool visible;
+    sf::Vector2f position;
+    sf::Vector2f windowSize;
+    std::vector<sf::Texture> textures;
+    std::vector<std::string> texturePaths = {
+        "Twin.jpg", 
+        "Sniper.jpg", 
+        "MachineGun.jpg", 
+        "Triple.jpg", 
+        "Assassin.jpg", 
+        "Destroyer.jpg"
+    };
+    TankType currentTankType;
+    std::vector<TankType> availableEvolutions;
+    
+public:
+    float button_size = 100;
+    TankEvolutionUI(sf::Vector2f windowSize, float spacing = 80.f);
+    ~TankEvolutionUI();
+    bool loadTextures();
+    void updateAvailableEvolutions(TankType currentType, bool canEvolve);
+    void updateOptions();
+    void update(MyTank &mytank);
+    void draw(sf::RenderWindow &window);
+    TankType getSelectedEvolution(sf::Vector2i mousePos);
+    void setVisible(bool v) { visible = v; }
+    bool isVisible() const { return visible; }
+    void setPosition(sf::Vector2f pos) { position = pos; }
+};
+
+

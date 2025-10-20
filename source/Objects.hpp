@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
+
 float hypot2(const sf::Vector2f &x);
 
 // Chỉ số + thêm

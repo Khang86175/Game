@@ -1,6 +1,7 @@
 #pragma once
 #include "Objects.hpp"
 #include "Globals.hpp"
+#include "HealthBar.hpp"
 
 class Obstacle {
 public:
@@ -11,6 +12,7 @@ public:
     bool alive{ true };
     int timeToRespawn=0;
     float friction{ 0.94f };
+    HealthBar hp_bar;
 
     struct Conf {
         float drawRadius;

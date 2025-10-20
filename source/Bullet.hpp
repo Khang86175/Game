@@ -9,7 +9,7 @@ public:
     int timetodie;
     bool alive;
 
-    Bullet(sf::Vector2f pos, float angle,float size,float speed,int timetodie, float dmg);
+    Bullet(sf::Vector2f pos, float angle,float size, float gun_lenght,float speed,int timetodie, float dmg);
 
     void update();
     void draw(sf::RenderWindow &window);
