@@ -10,13 +10,14 @@
 #include "World.hpp"
 #include "menu.hpp"
 
-enum GameState { MENU, PLAYING, HIGHSCORE, PAUSED };
+enum GameState { MENU, PLAYING, HIGHSCORE, PAUSED ,GAMEOVER};
 
 int main() {
     srand((unsigned)time(nullptr));
     int delay_click = 0;
     float bodysize = 36;
-
+    int finalScore = 0;
+    int gameOverEndFrame = -1;
     sf::ContextSettings settings;
     settings.antiAliasingLevel = 4;
     sf::RenderWindow window(sf::VideoMode({WIDTH, HEIGHT}), "Diep", sf::Style::Default, sf::State::Windowed, settings);
@@ -43,6 +44,7 @@ int main() {
     StartingScreen start(uiFont, (float)WIDTH, (float)HEIGHT, bg);
     HighScoreScreen high(uiFont, (float)WIDTH, (float)HEIGHT, *hsBG);
     PauseScreen pause(uiFont, (float)WIDTH, (float)HEIGHT);
+    GameOverScreen gameOverScreen(SupercellMagic, WIDTH, HEIGHT, fps);
 
     MyTank myTank(0, 0, bodysize, MapSize);
     EnemyTank enemyTank(150, 0, bodysize, MapSize, 0);
@@ -136,6 +138,12 @@ int main() {
             window.display();
             continue;
         }
+        if (state == GAMEOVER) {
+            gameOverScreen.draw(window, mainView, defaultView,
+                                line, bullets, obs, myTank, xpbar,
+                                minimap, highScoreScreen, playerName, state);
+            continue;
+        }
 
         if (state == PAUSED) {
             window.clear(sf::Color(204, 204, 204));
@@ -206,10 +214,13 @@ int main() {
 
             if (myTank.body.hp <= 0) {
                 gameOver = true;
-                high.addScore(playerName, myTank.score);
-                state = MENU;
+                gameOverScreen.setFinalScore(myTank.score);
+                state = GAMEOVER;
+                gameOverScreen.reset();
             }
         }
+        
+
 
         window.clear(sf::Color(204, 204, 204));
         mainview.setCenter(myTank.body.position);

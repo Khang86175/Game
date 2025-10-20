@@ -326,3 +326,88 @@ void PauseScreen::draw(RenderWindow& w)
     w.draw(menuButton);
     w.draw(menuText);
 }
+GameOverScreen::GameOverScreen(sf::Font& f, int width, int height, float fpsValue)
+    : font(f), WIDTH(width), HEIGHT(height), fps(fpsValue)
+{
+    frame = 0;
+    gameOverEndFrame = static_cast<int>(5 * fpsValue); // 3 giây
+    finalScore = 0;
+}
+
+void GameOverScreen::setFinalScore(int score) {
+    finalScore = score;
+}
+
+void GameOverScreen::reset() {
+    frame = 0;
+}
+void GameOverScreen::draw(sf::RenderWindow& window,
+              sf::View& mainview,
+              sf::View& defaultView,
+              Line& line,
+              std::vector<Bullet>& bullets,
+              std::vector<Obs>& obs,
+              Tank& mytank,
+              XPBar& xpbar,
+              MiniMap& minimap,
+              HighScore& highscorescreen,
+              const std::string& currentPlayerName,
+              int& gamestate)
+{
+    window.clear(sf::Color(204, 204, 204));
+    mainview.setCenter(mytank.body.position);
+    window.setView(mainview);
+    line.draw(window);
+    for (auto& b : bullets) b.draw(window);
+    for (auto& o : obs) o.DrawObs(window);
+    mytank.Drawtank(window);
+    window.setView(defaultView);
+    xpbar.draw(window);
+    minimap.Drawmap(window, mytank.body.position);
+
+    sf::Text title(font), scoreT(font), cd(font);
+    title.setString("GAME OVER");
+    title.setCharacterSize(56);
+    title.setFillColor(sf::Color::White);
+    title.setOutlineThickness(3.f);
+    title.setOutlineColor(sf::Color::Black);
+    auto tb = title.getLocalBounds();
+    title.setOrigin({ tb.width / 2, tb.height / 2 });
+    title.setPosition({ (float)WIDTH / 2, (float)HEIGHT / 2 - 80 });
+
+    scoreT.setString("Score: " + std::to_string(finalScore));
+    scoreT.setCharacterSize(28);
+    scoreT.setFillColor(sf::Color::Red);
+    scoreT.setOutlineThickness(2.f);
+    scoreT.setOutlineColor(sf::Color::Black);
+    auto sb = scoreT.getLocalBounds();
+    scoreT.setOrigin({ sb.width / 2, sb.height / 2 });
+    scoreT.setPosition({ (float)WIDTH / 2, (float)HEIGHT / 2 - 30 });
+
+    float remain = std::max(0, gameOverEndFrame - frame) / fps;
+    int tenths = static_cast<int>(std::round(remain));
+    cd.setString("Returning to MAIN MENU in " + std::to_string(tenths) + "s");
+    cd.setCharacterSize(20);
+    cd.setFillColor(sf::Color::White);
+    cd.setOutlineThickness(1.5f);
+    cd.setOutlineColor(sf::Color::Black);
+    auto cb = cd.getLocalBounds();
+    cd.setOrigin({ cb.width / 2, cb.height / 2 });
+    cd.setPosition({ (float)WIDTH / 2, (float)HEIGHT / 2 + 10 });
+
+    sf::RectangleShape dim({ (float)WIDTH, (float)HEIGHT });
+    dim.setFillColor(sf::Color(0, 0, 0, 140));
+    window.draw(dim);
+    window.draw(title);
+    window.draw(scoreT);
+    window.draw(cd);
+
+    window.display();
+
+    if (frame >= gameOverEndFrame) {
+        highscorescreen.addScore(currentPlayerName, finalScore);
+        highscorescreen.updateDisplay();
+        gamestate = MENU;
+    }
+    frame++;
+}

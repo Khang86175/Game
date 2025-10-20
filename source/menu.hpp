@@ -78,3 +78,31 @@ public:
     bool clickMenu(sf::Vector2i mp);
     void draw(sf::RenderWindow& window);
 };
+class GameOverScreen {
+private:
+    sf::Font& font;
+    int WIDTH, HEIGHT;
+    float fps;
+    int frame;
+    int gameOverEndFrame;
+    int finalScore;
+
+public:
+    GameOverScreen(sf::Font& f, int width, int height, float fpsValue);
+
+    void setFinalScore(int score);
+    void reset();
+    template<typename Line, typename Bullet, typename Obs, typename Tank, typename XPBar, typename MiniMap, typename HighScore>
+    void draw(sf::RenderWindow& window,
+              sf::View& mainview,
+              sf::View& defaultView,
+              Line& line,
+              std::vector<Bullet>& bullets,
+              std::vector<Obs>& obs,
+              Tank& mytank,
+              XPBar& xpbar,
+              MiniMap& minimap,
+              HighScore& highscorescreen,
+              const std::string& currentPlayerName,
+              int& gamestate);
+};
