@@ -191,14 +191,21 @@ public:
 class EnemyTank{
 public:
     Obj body;
+    HealthBar hp_bar;
     float friction;
-    float acceleration;
+    float acceleration=0.25;
     sf::CircleShape bodyShape;
     Stats stats; 
-    int tankType;
+
+    TankType tankType;
 
     TankBasic *tankBasic;
     TankTwin *tankTwin;
+    TankSniper *tankSniper;
+    TankMachineGun *tankMachineGun;
+    TankTriple *tankTriple;
+    TankAssassin *tankAssassin;
+    TankDestroyer *tankDestroyer;
 
     float base_hp_regen = 0.1f;
     float base_maxhp = 100;
@@ -209,7 +216,7 @@ public:
     int base_reload = 60;
     float base_acceleration = 0.25;
 
-    EnemyTank(float x, float y, float size,float mapsize,int tanktype);
+    EnemyTank(float x, float y, float size,float mapsize,TankType tanktype);
     ~EnemyTank();
     void update(int angle);
     float getBulletSpeed();
@@ -217,5 +224,7 @@ public:
     float getBulletDamage();
     void Drawtank(sf::RenderWindow &window);
     void shoot(std::vector<Bullet> &bullets, int angle);
-    int getTankType();
+    TankType getTankType();
+    int NextMove(MyTank &target);
 };
+

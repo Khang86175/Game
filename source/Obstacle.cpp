@@ -42,8 +42,6 @@ void Obstacle::DrawObs(sf::RenderWindow& window) {
 }
 
 void Obstacle::respawn(const std::vector<Obstacle>& others, const Obj& tankBody) {
-    if(timeToRespawn<currentFrame)
-        return;
     bool ok = false;
     sf::Vector2f p;
     while (!ok) {

@@ -4,3 +4,4 @@
 "khangvip" 13212
 "name1" 9000
 "name2d2d" 1000
+"Player" 25
