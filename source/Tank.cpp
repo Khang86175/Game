@@ -452,7 +452,8 @@ void MyTank::Drawtank(sf::RenderWindow &window){
             if (tankDestroyer) tankDestroyer->drawTank(window, bodyShape);
             break;
     }
-    hp_bar.draw(window);
+    if(body.hp!=body.maxhp)
+        hp_bar.draw(window);
 }
 void MyTank::moveX(float dir){
     body.velocity.x+=acceleration*dir;

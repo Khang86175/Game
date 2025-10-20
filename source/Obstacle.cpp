@@ -36,7 +36,8 @@ void Obstacle::update() {
 void Obstacle::DrawObs(sf::RenderWindow& window) { 
     if (alive) {
         window.draw(shape); 
-        hp_bar.draw(window);
+        if(body.hp!=body.maxhp)
+            hp_bar.draw(window);
     }
 }
 
