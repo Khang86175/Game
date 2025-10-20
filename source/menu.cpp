@@ -185,7 +185,7 @@ void StartingScreen::handleTextInput(char32_t u)
             nameText.setString(playerName);
         }
     }
-    else if (playerName.length() < 15) {
+    else if (playerName.length() < 10) {
         if (std::isalnum(u)) {
             playerName += static_cast<char>(u);
             nameText.setString(playerName);
@@ -263,7 +263,7 @@ PauseScreen::PauseScreen(Font& f, float w, float h)
 
     resumeButton.setSize({ 220, 60 });
     resumeButton.setOrigin({ 110, 30 });
-    resumeButton.setPosition({ w / 2.f, h / 2.f });
+    resumeButton.setPosition({ w / 2.f, h / 2.f -30 });
     resumeButton.setFillColor(Color(0, 178, 225));
     resumeButton.setOutlineThickness(4);
     resumeButton.setOutlineColor(Color(14, 144, 178));
@@ -279,7 +279,7 @@ PauseScreen::PauseScreen(Font& f, float w, float h)
 
     menuButton.setSize({ 220, 60 });
     menuButton.setOrigin({ 110, 30 });
-    menuButton.setPosition({ w / 2.f, h / 2.f + 90 });
+    menuButton.setPosition({ w / 2.f, h / 2.f + 50 });
     menuButton.setFillColor(Color(255, 178, 0));
     menuButton.setOutlineThickness(4);
     menuButton.setOutlineColor(Color(200, 140, 0));

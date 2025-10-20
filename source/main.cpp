@@ -152,7 +152,7 @@ int main() {
             if (pause.clickResume(mp))
                 state = PLAYING;
             else if (pause.clickMenu(mp)) {
-                window.close();
+                state = MENU;
                 continue;
             }
             pause.draw(window);
