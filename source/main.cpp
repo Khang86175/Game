@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <fstream>
 
 #include "Bullet.hpp"
 #include "Collision.hpp"
@@ -19,10 +20,10 @@ int main() {
 
     sf::ContextSettings settings;
     settings.antiAliasingLevel = 4;
-    sf::RenderWindow window(sf::VideoMode({WIDTH, HEIGHT}), "Diep", sf::Style::Default, sf::State::Windowed, settings);
+    sf::RenderWindow window(sf::VideoMode({(unsigned)WIDTH,(unsigned)HEIGHT}), "Diep", sf::Style::Default, sf::State::Windowed, settings);
     window.setFramerateLimit(fps);
     sf::View mainview;
-    mainview.setSize({WIDTH * 1.5, HEIGHT * 1.5});
+    mainview.setSize({WIDTH * 1.5,HEIGHT * 1.5});
 
     // tải font chữ
     sf::Font font;
@@ -44,6 +45,24 @@ int main() {
     HighScoreScreen high(uiFont, (float)WIDTH, (float)HEIGHT, *hsBG);
     PauseScreen pause(uiFont, (float)WIDTH, (float)HEIGHT);
 
+    std::ifstream cin ("highscore.txt");
+    std::string temp;
+    if(!cin){
+        std::ofstream cout("highscore.txt");
+        cout.close();
+    }
+    else{
+        int i=10;
+        while(i-- && getline(cin,temp)){
+            std::stringstream ss(temp);
+            std::string name;
+            int score;
+            ss >> std::quoted(name) >> score;
+            high.addScore(name,score);
+        }
+    }
+    cin.close();
+    
     MyTank myTank(0, 0, bodysize, MapSize);
     EnemyTank enemyTank(150, 0, bodysize, MapSize, 0);
     Minimap mmap((float)WIDTH, (float)HEIGHT, 120.f, MapSize);
@@ -101,8 +120,9 @@ int main() {
                 if (state == MENU) start.handleTextInput(t->unicode);
             } 
             else if (const auto* m = ev->getIf<sf::Event::MouseButtonPressed>()) {
-                if (state == MENU && m->button == sf::Mouse::Button::Left)
+                if (state == MENU && m->button == sf::Mouse::Button::Left){
                     start.handleNameBoxClick(sf::Mouse::getPosition(window));
+                }
             }
         }
 
@@ -111,29 +131,38 @@ int main() {
         angle = (int)(std::atan2((float)dy, (float)dx) * 180.f / 3.14f);
 
         if (state == MENU) {
-            if (start.checkStartClick(mp)) {
+            if (start.checkStartClick(mp)&& delay_click == 0 ) {
                 state = PLAYING;
                 playerName = start.getPlayerName();
                 gameOver = false;
+                delay_click=10;
                 resetWorld();
             }
-            if (start.checkHighscoreClick(mp)) {
+            if (start.checkHighscoreClick(mp) && delay_click == 0) {
                 state = HIGHSCORE;
+                delay_click=10;
                 high.updateDisplay();
             }
             window.clear(sf::Color(204, 204, 204));
             start.checkHover(mp);
             start.draw(window);
             window.display();
+            if(delay_click > 0)
+                delay_click--;
             continue;
         }
 
         if (state == HIGHSCORE) {
-            if (high.checkBackClick(mp)) state = MENU;
+            if (high.checkBackClick(mp) && delay_click == 0){
+                delay_click = 10;
+                state = MENU;
+            }
             window.clear(sf::Color(204, 204, 204));
             high.checkHover(mp);
             high.draw(window);
             window.display();
+            if(delay_click > 0)
+                delay_click--;
             continue;
         }
 
@@ -149,12 +178,17 @@ int main() {
             xpbar.draw(window);
             mmap.Drawmap(window, myTank.body.position);
             pause.checkHover(mp);
-            if (pause.clickResume(mp))
+            if (pause.clickResume(mp) && delay_click==0){
                 state = PLAYING;
-            else if (pause.clickMenu(mp)) {
-                window.close();
+                delay_click=10;
+            }
+            else if (pause.clickMenu(mp) && delay_click==0) {
+                state = MENU;
+                delay_click=10;
                 continue;
             }
+            if(delay_click > 0)
+                delay_click--;
             pause.draw(window);
             window.display();
             continue;
@@ -178,7 +212,6 @@ int main() {
                 if (idx != -1) myTank.upgradeStat(idx);
                 delay_click = 10;
             }
-            delay_click = std::max(0, delay_click - 1);
 
             myTank.update(angle);
             xpbar.update(myTank);
@@ -207,6 +240,13 @@ int main() {
             if (myTank.body.hp <= 0) {
                 gameOver = true;
                 high.addScore(playerName, myTank.score);
+                std::ofstream cout("highscore.txt");
+                for(int i=0;i<10;i++){
+                    if(high.scores[i].name=="" )
+                        break;
+                    cout << "\"" << high.scores[i].name<<"\" "<< high.scores[i].score <<'\n';
+                }
+                cout.close();
                 state = MENU;
             }
         }
@@ -227,6 +267,8 @@ int main() {
 
         if (state != PAUSED) 
             currentFrame++;
+        if(delay_click > 0)
+            delay_click--;
     }
     return 0;
 }

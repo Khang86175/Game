@@ -51,7 +51,7 @@ HighScoreScreen::HighScoreScreen(Font& f, float w, float h, Texture& bg)
         t.setFillColor(Color::White);
         t.setOutlineThickness(2);
         t.setOutlineColor(Color::Black);
-        t.setPosition({ w / 2.f - 200, 150 + i * 35 });
+        t.setPosition({ w / 2.f - 200, 150.f + i * 35.f });
         scoreTexts.push_back(t);
     }
 }
@@ -123,8 +123,8 @@ StartingScreen::StartingScreen(Font& f, float w, float h, Texture& bg)
     background.setScale({ w / b.size.x, h / b.size.y });
 
     // Buttons
-    startButton.setSize({ 200, 60 });
-    startButton.setOrigin({ 100, 30 });
+    startButton.setSize({ 250, 60 });
+    startButton.setOrigin({ 125, 30 });
     startButton.setPosition({ w / 2.f, h / 2.f + 100 });
     startButton.setFillColor(Color(0, 178, 225));
     startButton.setOutlineThickness(4);
@@ -139,8 +139,8 @@ StartingScreen::StartingScreen(Font& f, float w, float h, Texture& bg)
     startText.setOrigin(st.size / 2.f);
     startText.setPosition(startButton.getPosition());
 
-    highscoreButton.setSize({ 200, 60 });
-    highscoreButton.setOrigin({ 100, 30 });
+    highscoreButton.setSize({ 250, 60 });
+    highscoreButton.setOrigin({ 125, 30 });
     highscoreButton.setPosition({ w / 2.f, h / 2.f + 180 });
     highscoreButton.setFillColor(Color(255, 178, 0));
     highscoreButton.setOutlineThickness(4);
@@ -261,8 +261,8 @@ PauseScreen::PauseScreen(Font& f, float w, float h)
     title.setOrigin(tb.size / 2.f);
     title.setPosition({ w / 2.f, h / 2.f - 100 });
 
-    resumeButton.setSize({ 220, 60 });
-    resumeButton.setOrigin({ 110, 30 });
+    resumeButton.setSize({ 240, 60 });
+    resumeButton.setOrigin({ 120, 30 });
     resumeButton.setPosition({ w / 2.f, h / 2.f });
     resumeButton.setFillColor(Color(0, 178, 225));
     resumeButton.setOutlineThickness(4);
@@ -277,8 +277,8 @@ PauseScreen::PauseScreen(Font& f, float w, float h)
     resumeText.setOrigin(rb.size / 2.f);
     resumeText.setPosition(resumeButton.getPosition());
 
-    menuButton.setSize({ 220, 60 });
-    menuButton.setOrigin({ 110, 30 });
+    menuButton.setSize({ 240, 60 });
+    menuButton.setOrigin({ 120, 30 });
     menuButton.setPosition({ w / 2.f, h / 2.f + 90 });
     menuButton.setFillColor(Color(255, 178, 0));
     menuButton.setOutlineThickness(4);

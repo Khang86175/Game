@@ -1,0 +1,6 @@
+"khangvip2" 123345
+"khang" 46000
+"name2" 17050
+"khangvip" 13212
+"name1" 9000
+"name2d2d" 1000

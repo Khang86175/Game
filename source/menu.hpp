@@ -17,9 +17,9 @@ private:
     sf::Text titleText;
 
     std::vector<sf::Text> scoreTexts;
-    std::vector<HighScoreEntry> scores;
     bool backHovered;
 public:
+    std::vector<HighScoreEntry> scores;
     HighScoreScreen(sf::Font& f, float w, float h, sf::Texture& bgTexture);
 
     void addScore(const std::string& name, int score);

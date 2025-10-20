@@ -104,8 +104,8 @@ void MyTank::update(int angle){
     bodyShape.setPosition(body.position);
 }
 void MyTank::applyStats(){
-    body.setHpRegen(base_hp_regen * (1+stats.hp_regen*0.05f));
-    body.setMaxHp(base_maxhp * (1+stats.maxhp*20));
+    body.setHpRegen(base_hp_regen * (1+stats.hp_regen*0.12f));
+    body.setMaxHp(base_maxhp * pow(1.2,(1+stats.maxhp)));
     body.setBodyDmg(base_body_dmg * (1+stats.body_dmg*0.2f));
     acceleration = base_acceleration * (1+stats.move_speed*0.06f);
     float newReload = base_reload - stats.reload*4;
@@ -126,8 +126,8 @@ void MyTank::levelUp(){
         int temp=(xp_to_lv_up-xp_base)*(std::max(1.35-level/10,1.05));
         xp_base = xp_to_lv_up;
         xp_to_lv_up += temp;
-        statPoint += 1;
-
+        if(level<=50)
+            statPoint += 1;
         body.hp = body.maxhp;
     }
     if (level >= 5 && tankType == 0){
@@ -135,6 +135,7 @@ void MyTank::levelUp(){
         tankBasic = nullptr;
 
         bodyShape.setRadius(bodyShape.getRadius() + 5);
+        body.hitbox_r+=5;
         bodyShape.setOrigin({bodyShape.getRadius(), bodyShape.getRadius()});
         body.hitbox_r = bodyShape.getRadius();
 
@@ -253,6 +254,8 @@ void MyTank::reset(float x, float y, float size, float mapsize){
     body.maxhp = 100;
     body.hp = 100;
     body.hp_regen = 0.2;
+    acceleration = 0.25;
+
     score = 0;
     level = 1;
     xp_base = 0;
@@ -260,8 +263,11 @@ void MyTank::reset(float x, float y, float size, float mapsize){
     tankType = 0;
     tankTwin = nullptr;
     statPoint = 0;
-    stats = {0,0,0,0,0,0,0,7};
+    stats = {0,0,0,0,0,0,0,0};
     body.velocity={0,0};
+    body.hitbox_r=size;
+    bodyShape.setRadius(size);
+
     tankBasic = new TankBasic(x, y, size);
 }
 
