@@ -1,5 +1,5 @@
 #include "Tank.hpp"
-
+//CANNON IS HERE
 Cannon::Cannon(float x, float y,float size, float reload):position({x,y}),angle(0),delay(0), reload(reload), size(size*2, size*2/3){
     gun.setSize({size*2, size*2/3});
     gun.setFillColor(sf::Color(153,153,153));
@@ -22,7 +22,9 @@ void Cannon::setReload(int new_reload){
     reload = new_reload;
 }  
 
-TankBasic::TankBasic(float x, float y, float size) : gun(x,y,size, 30){}
+//TANKBASIC IS HERE
+TankBasic::TankBasic(float x, float y, float size)
+    : gun(x,y,size, 30){}
 void TankBasic::drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape){
     gun.DrawGun(window);
     window.draw(bodyShape);
@@ -37,7 +39,9 @@ void TankBasic::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int
     }
 }
 
-TankTwin::TankTwin(float x, float y, float size): gun1(x, y, size, 30), gun2(x, y, size, 30), gunToggle(0), gunOffSet(size/2) {}
+//TANKTWIN IS HERE
+TankTwin::TankTwin(float x, float y, float size)
+    : gun1(x, y, size, 30), gun2(x, y, size, 30), gunToggle(0), gunOffSet(size/2) {}
 void TankTwin::update(sf::Vector2f pos, float angle){
     float offSetX = gunOffSet * cos((angle + 90) * 3.14f / 180.f);
     float offsetY = gunOffSet * sin((angle + 90) * 3.14f / 180.f);
@@ -64,6 +68,7 @@ void TankTwin::drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape){
     window.draw(bodyShape);
 }
 
+//MYTANK IS HERE
 MyTank::MyTank(float x, float y, float size,float mapsize)
     : body(x,y,mapsize,size,100, 0.2f, 2),score(0),level(1), xp_base(0), xp_to_lv_up(30), tankType(0), tankTwin(nullptr), statPoint(0){
     bodyShape.setRadius(size);
@@ -82,15 +87,8 @@ MyTank::~MyTank(){
     if (tankTwin) delete tankTwin;
 }
 void MyTank::update(int angle){
-    // hàm clamp giới hạn tốc độ
-    // hàm hypot(x,y) = sqrt(x*x+y*y)
     body.velocity*=friction;
 
-    //dpos=std::hypot(body.velocity.x,body.velocity.y);
-    //if(dpos>velocity_max){
-    //    body.velocity.x=body.velocity.x/dpos*velocity_max;
-    //    body.velocity.y=body.velocity.y/dpos*velocity_max;
-    //}
     if(body.velocity.x<0.01 && body.velocity.x>-0.01)
         body.velocity.x=0;
     if(body.velocity.y<0.01 && body.velocity.y>-0.01)
@@ -106,11 +104,11 @@ void MyTank::update(int angle){
     bodyShape.setPosition(body.position);
 }
 void MyTank::applyStats(){
-    body.setHpRegen(base_hp_regen * (1+stats.hp_regen*0.15f));
-    body.setMaxHp(base_maxhp * (1+stats.maxhp*0.2f));
-    body.setBodyDmg(base_body_dmg * (1+stats.body_dmg*0.25f));
+    body.setHpRegen(base_hp_regen * (1+stats.hp_regen*0.05f));
+    body.setMaxHp(base_maxhp * (1+stats.maxhp*20));
+    body.setBodyDmg(base_body_dmg * (1+stats.body_dmg*0.2f));
     acceleration = base_acceleration * (1+stats.move_speed*0.06f);
-    float newReload = base_reload - stats.reload*2;
+    float newReload = base_reload - stats.reload*4;
     if (tankType == 0){
         tankBasic->gun.setReload(newReload);
     }
@@ -250,8 +248,24 @@ void MyTank::shoot(std::vector<Bullet> &bullets, int angle){
 int MyTank::getTankType(){
     return tankType;
 }
+void MyTank::reset(float x, float y, float size, float mapsize){    
+    body.position={x,y};
+    body.maxhp = 100;
+    body.hp = 100;
+    body.hp_regen = 0.2;
+    score = 0;
+    level = 1;
+    xp_base = 0;
+    xp_to_lv_up = 30;
+    tankType = 0;
+    tankTwin = nullptr;
+    statPoint = 0;
+    stats = {0,0,0,0,0,0,0,7};
+    body.velocity={0,0};
+    tankBasic = new TankBasic(x, y, size);
+}
 
-
+// ENEMYTANK IS HERE
 EnemyTank::EnemyTank(float x, float y, float size, float mapsize,int tankType)
     : body(x,y,mapsize,size,100,0.2f,2),tankType(tankType){
     bodyShape.setRadius(size);

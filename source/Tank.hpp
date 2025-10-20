@@ -78,6 +78,7 @@ public:
     bool upgradeStat(int statIndex);
     void shoot(std::vector<Bullet> &bullets, int angle);
     int getTankType();
+    void reset(float x, float y, float size, float mapsize);
 };
 
 class EnemyTank{

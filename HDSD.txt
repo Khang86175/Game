@@ -1,4 +1,0 @@
-phiên bản SFML : 3.0.0
-code này đã được chạy trên VSCode
-Video Huớng dẫn : https://www.youtube.com/watch?v=RHrU3I1nsEI&list=LL&index=2&t=786s
-Documents : https://www.sfml-dev.org/tutorials/3.0/
