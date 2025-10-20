@@ -174,3 +174,109 @@ void StatsBar::draw(sf::RenderWindow &window, sf::Font &font){
 bool StatsBar::isVisible(){
     return  visible;
 }
+
+Option::Option(TankType t, sf::Texture &texture, sf::Vector2f pos)
+    : type(t), sprite(texture){
+    sprite.setScale({0.1f, 0.1f});
+    // sf::FloatRect bounds = sprite.getLocalBounds();
+    // button.setSize(bounds.size);
+    // button.setFillColor(sf::Color::Transparent);
+    sprite.setPosition(pos);
+    // button.setPosition(pos);
+}
+
+void Option::draw(sf::RenderWindow &window) {
+    window.draw(sprite);
+}
+bool Option::checkButtonClick(sf::Vector2i mousePos){
+    return sprite.getGlobalBounds().contains(sf::Vector2f(mousePos));
+}
+
+TankEvolutionUI::TankEvolutionUI(sf::Vector2f wSize, float spacing)
+    : visible(false), windowSize(wSize), currentTankType(TankType::BASIC) {
+    position.x = 15;
+    position.y = 15;
+}
+TankEvolutionUI::~TankEvolutionUI() {
+    options.clear();
+}
+bool TankEvolutionUI::loadTextures() {
+    textures.clear();
+    textures.resize(texturePaths.size());
+    for (int i = 0; i < texturePaths.size(); i++) {
+        if (!textures[i].loadFromFile(texturePaths[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+void TankEvolutionUI::updateAvailableEvolutions(TankType currentType, bool canEvolve) {
+    currentTankType = currentType;
+    availableEvolutions.clear();
+    if (!canEvolve) {
+        return;
+    }
+    if (currentType == TankType::BASIC) {
+        availableEvolutions.push_back(TankType::TWIN);
+        availableEvolutions.push_back(TankType::SNIPER);
+    } 
+    else if (currentType == TankType::TWIN) {
+        availableEvolutions.push_back(TankType::TRIPLE);
+        availableEvolutions.push_back(TankType::MACHINE_GUN);
+    } 
+    else if (currentType == TankType::SNIPER) {
+        availableEvolutions.push_back(TankType::ASSASSIN);
+    } 
+    else if (currentType == TankType::MACHINE_GUN){
+        availableEvolutions.push_back(TankType::DESTROYER);
+    }
+}
+void TankEvolutionUI::updateOptions() {
+    options.clear();
+    int textureIndices[] = {
+        -1, // BASIC
+        0, // TWIN
+        1, // SNIPER
+        2, // MACHINE_GUN
+        3, // TRIPLE
+        4, // ASSASSIN
+        5  // DESTROYER
+    };
+    for (size_t i = 0; i < availableEvolutions.size(); i++) {
+        TankType type = availableEvolutions[i];
+        int textureIdx = textureIndices[static_cast<int>(type)];
+        if (textureIdx < 0 || textureIdx >= textures.size()) {
+            continue; 
+        }
+        float xpos = position.x + i*(button_size + 20); 
+        Option opt(type, textures[textureIdx], {xpos,position.y});
+        options.push_back(opt);
+    }
+}
+void TankEvolutionUI::update(MyTank &mytank){
+    bool shouldBeVisible = mytank.canEvolve();
+    // std::cout << "evolutionUI.update() - shouldBeVisible: " << shouldBeVisible << " | visible: " << visible << std::endl;
+    if (shouldBeVisible && !visible) {
+        // std::cout << "Affichage de l'UI d'évolution!" << std::endl;
+        updateAvailableEvolutions(mytank.getTankType(), shouldBeVisible);
+        // std::cout << "Nombre d'évolutions disponibles: " << availableEvolutions.size() << std::endl;
+        updateOptions();
+        // std::cout << "Nombre d'options créées: " << options.size() << std::endl;
+    }
+    visible = shouldBeVisible;
+}
+void TankEvolutionUI::draw(sf::RenderWindow &window) {
+    if (!visible) return;
+    for (int i = 0; i < options.size(); i++){
+        options[i].draw(window);
+    }
+}
+TankType TankEvolutionUI::getSelectedEvolution(sf::Vector2i mousePos) {
+    if (!visible) return currentTankType;
+    for (int i = 0; i < options.size(); i++) {
+        if (options[i].checkButtonClick(mousePos)) {
+            return options[i].getType();
+        }
+    }
+    return currentTankType; // trả về currentTankType nếu ko chọn j
+}

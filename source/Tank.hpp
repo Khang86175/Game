@@ -2,7 +2,20 @@
 #include "Objects.hpp"
 #include "Bullet.hpp"
 #include "Globals.hpp"
+#include "HealthBar.hpp"
 #include <algorithm>
+
+enum TankType{
+    BASIC,
+    TWIN,
+    SNIPER,
+    MACHINE_GUN,
+    TRIPLE,
+    ASSASSIN,
+    DESTROYER
+};
+bool canEvolveTo(TankType currentType, TankType targetType);
+bool isMaxEvolution(TankType type);
 
 class Cannon{
 public:
@@ -18,6 +31,34 @@ public:
     void setReload(int new_reload);
 };
 
+class MachineGunCannon{
+public:
+    int delay, reload;
+    float angle;
+    sf::Vector2f position;
+    sf::ConvexShape gun;
+    sf::Vector2f size;
+
+    MachineGunCannon(float x, float y,float size, float reload);
+    void update(sf::Vector2f pos, int angle);
+    void DrawGun(sf::RenderWindow &window);
+    void setReload(int new_reload);  
+};
+
+class DestroyerCannon{
+public:
+    int delay, reload;
+    float angle;
+    sf::Vector2f position;
+    sf::RectangleShape gun;
+    sf::Vector2f size;
+
+    DestroyerCannon(float x, float y,float size, float reload);
+    void update(sf::Vector2f pos, int angle);
+    void DrawGun(sf::RenderWindow &window);
+    void setReload(int new_reload);
+};
+
 class TankBasic{
 public:
     Cannon gun;
@@ -25,21 +66,78 @@ public:
     void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
     void update(sf::Vector2f pos, int angle);
     void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void setReload(int new_reload);
 };
+
 class TankTwin{
 public:
     Cannon gun1, gun2;
-    int gunToggle; // 0:gun1 , 1:gun2
     float gunOffSet; // Kc giữa 2 nòng
 
     TankTwin(float x, float y, float size);
     void update(sf::Vector2f pos, float angle);
     void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
     void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
+    void setReload(int new_reload); 
 };
+
+class TankTriple{
+public:
+    Cannon gun1, gun2, gun3;
+    float gunOffSet;
+    TankTriple(float x, float y, float size);
+    void update(sf::Vector2f pos, float angle);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
+    void setReload(int new_reload); 
+};
+
+class TankMachineGun{
+public:
+    MachineGunCannon gun;
+    TankMachineGun(float x, float y, float size);
+    void update(sf::Vector2f pos, int angle);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
+    void setReload(int new_reload); 
+};
+
+class TankDestroyer {
+public:
+    DestroyerCannon gun;
+    TankDestroyer(float x, float y, float size);
+    void update(sf::Vector2f pos, int angle);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
+    void setReload(int new_reload); 
+};
+
+class TankSniper {
+public:
+    Cannon gun;
+    TankSniper(float x, float y, float size);
+    void update(sf::Vector2f pos, int angle);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
+    void setReload(int new_reload); 
+};
+
+class TankAssassin {
+public:
+    Cannon gun;
+
+    TankAssassin(float x, float y, float size);
+    void update(sf::Vector2f pos, int angle);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
+    void setReload(int new_reload); 
+};
+
+
 class MyTank{
 public:
     Obj body;
+    HealthBar hp_bar;
     float friction;
     float acceleration = 0.25;
     sf::CircleShape bodyShape;
@@ -49,9 +147,15 @@ public:
     int statPoint;
     Stats stats; 
 
-    int tankType; // 0:basic, 1:twin
+    TankType tankType;
+
     TankBasic *tankBasic;
     TankTwin *tankTwin;
+    TankSniper *tankSniper;
+    TankMachineGun *tankMachineGun;
+    TankTriple *tankTriple;
+    TankAssassin *tankAssassin;
+    TankDestroyer *tankDestroyer;
 
     // Base stats
     float base_hp_regen = 0.1f;
@@ -69,6 +173,8 @@ public:
     void applyStats();
     void addScore(int point);
     void levelUp();
+    bool canEvolve();
+    bool evolveTank(TankType newType);
     float getBulletSpeed();
     int getBulletLife();
     float getBulletDamage();
@@ -77,7 +183,7 @@ public:
     void moveY(float dy);
     bool upgradeStat(int statIndex);
     void shoot(std::vector<Bullet> &bullets, int angle);
-    int getTankType();
+    TankType getTankType();
     void reset(float x, float y, float size, float mapsize);
 };
 

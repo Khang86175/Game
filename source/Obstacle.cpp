@@ -9,7 +9,7 @@ Obstacle::Conf Obstacle::configFor(int t) {
 Obstacle::Obstacle(float x, float y, float mapsize, int t)
     : type(t),
     body(x, y, mapsize, configFor(t).drawRadius* HITBOX_SCALE, configFor(t).hp, 0.f, configFor(t).bodyDmg),
-    xp_reward(configFor(t).xp) {
+    xp_reward(configFor(t).xp), hp_bar(50,5,20){
     Conf c = configFor(t);
     shape.setPointCount(static_cast<std::size_t>(t));
     shape.setOutlineThickness(5.f);
@@ -20,6 +20,7 @@ Obstacle::Obstacle(float x, float y, float mapsize, int t)
     shape.setOutlineColor(c.outline);
     float randomDeg = static_cast<float>(rand() % 360);
     shape.setRotation(sf::degrees(randomDeg));
+    hp_bar.setOffSet(c.drawRadius + 10);
 }
 
 void Obstacle::update() {
@@ -29,9 +30,15 @@ void Obstacle::update() {
     if (std::abs(body.velocity.x) < 0.1f) body.velocity.x = 0.f;
     if (std::abs(body.velocity.y) < 0.1f) body.velocity.y = 0.f;
     shape.setPosition(body.position);
+    hp_bar.update(body); 
 }
 
-void Obstacle::DrawObs(sf::RenderWindow& window) { if (alive) window.draw(shape); }
+void Obstacle::DrawObs(sf::RenderWindow& window) { 
+    if (alive) {
+        window.draw(shape); 
+        hp_bar.draw(window);
+    }
+}
 
 void Obstacle::respawn(const std::vector<Obstacle>& others, const Obj& tankBody) {
     if(timeToRespawn<currentFrame)

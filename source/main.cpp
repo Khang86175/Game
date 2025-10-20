@@ -10,6 +10,7 @@
 #include "UI.hpp"
 #include "World.hpp"
 #include "menu.hpp"
+#include "HealthBar.hpp"
 
 enum GameState { MENU, PLAYING, HIGHSCORE, PAUSED };
 
@@ -67,11 +68,15 @@ int main() {
     EnemyTank enemyTank(150, 0, bodysize, MapSize, 0);
     Minimap mmap((float)WIDTH, (float)HEIGHT, 120.f, MapSize);
     XpBar xpbar((float)WIDTH, (float)HEIGHT, {400.f, 10.f}, myTank, uiFont);
-    StatsBar sbar(uiFont, (int)WIDTH, (int)HEIGHT);
+    StatsBar statsbar(uiFont, (int)WIDTH, (int)HEIGHT);
+    TankEvolutionUI evolutionUI({WIDTH, HEIGHT});
+    if (!evolutionUI.loadTextures())
+        return -1;
     Line grid(MapSize);
 
     std::vector<Obstacle> obs;
-    std::vector<Bullet> my_bullets, enemy_bullets;
+    std::vector<Bullet> my_bullets;
+    std::vector<Bullet> enemy_bullets;
 
     auto resetWorld = [&]() {
         myTank.reset(0, 0, bodysize, MapSize);
@@ -126,25 +131,25 @@ int main() {
             }
         }
 
-        sf::Vector2i mp = sf::Mouse::getPosition(window);
-        int dx = mp.x - (int)window.getSize().x / 2, dy = mp.y - (int)window.getSize().y / 2;
+        sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+        int dx = mousePos.x - (int)window.getSize().x / 2, dy = mousePos.y - (int)window.getSize().y / 2;
         angle = (int)(std::atan2((float)dy, (float)dx) * 180.f / 3.14f);
 
         if (state == MENU) {
-            if (start.checkStartClick(mp)&& delay_click == 0 ) {
+            if (start.checkStartClick(mousePos)&& delay_click == 0 ) {
                 state = PLAYING;
                 playerName = start.getPlayerName();
                 gameOver = false;
                 delay_click=10;
                 resetWorld();
             }
-            if (start.checkHighscoreClick(mp) && delay_click == 0) {
+            if (start.checkHighscoreClick(mousePos) && delay_click == 0) {
                 state = HIGHSCORE;
                 delay_click=10;
                 high.updateDisplay();
             }
             window.clear(sf::Color(204, 204, 204));
-            start.checkHover(mp);
+            start.checkHover(mousePos);
             start.draw(window);
             window.display();
             if(delay_click > 0)
@@ -153,12 +158,12 @@ int main() {
         }
 
         if (state == HIGHSCORE) {
-            if (high.checkBackClick(mp) && delay_click == 0){
+            if (high.checkBackClick(mousePos) && delay_click == 0){
                 delay_click = 10;
                 state = MENU;
             }
             window.clear(sf::Color(204, 204, 204));
-            high.checkHover(mp);
+            high.checkHover(mousePos);
             high.draw(window);
             window.display();
             if(delay_click > 0)
@@ -177,12 +182,12 @@ int main() {
             window.setView(window.getDefaultView());
             xpbar.draw(window);
             mmap.Drawmap(window, myTank.body.position);
-            pause.checkHover(mp);
-            if (pause.clickResume(mp) && delay_click==0){
+            pause.checkHover(mousePos);
+            if (pause.clickResume(mousePos) && delay_click==0){
                 state = PLAYING;
                 delay_click=10;
             }
-            else if (pause.clickMenu(mp) && delay_click==0) {
+            else if (pause.clickMenu(mousePos) && delay_click==0) {
                 state = MENU;
                 delay_click=10;
                 continue;
@@ -207,15 +212,29 @@ int main() {
             if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))
                 myTank.shoot(my_bullets, angle);
 
-            if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && sbar.isVisible() && delay_click == 0) {
-                int idx = sbar.checkButtonClick(mp);
-                if (idx != -1) myTank.upgradeStat(idx);
-                delay_click = 10;
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && delay_click == 0){
+                if (evolutionUI.isVisible()) {
+                    TankType selected = evolutionUI.getSelectedEvolution(mousePos);
+                    if (selected != myTank.getTankType()){
+                        if (myTank.evolveTank(selected)){
+                            evolutionUI.setVisible(false);
+                            delay_click = 10;
+                        }
+                    }
+                }
+                // Chọn nâng cấp
+                else if (statsbar.isVisible()) {
+                    int statIndex = statsbar.checkButtonClick(mousePos);
+                    if(statIndex != -1){
+                        myTank.upgradeStat(statIndex);
+                        delay_click = 10;
+                    }
+                }
             }
 
             myTank.update(angle);
             xpbar.update(myTank);
-            sbar.update(myTank);
+            statsbar.update(myTank);
 
             std::stringstream ss;
             ss << "Level: " << myTank.level << "\nScore: " << myTank.score << "\nXp_base: " << myTank.xp_base << "/"
@@ -259,7 +278,7 @@ int main() {
         for (auto& o : obs) o.DrawObs(window);
         myTank.Drawtank(window);
         window.setView(window.getDefaultView());
-        sbar.draw(window, uiFont);
+        statsbar.draw(window, uiFont);
         xpbar.draw(window);
         mmap.Drawmap(window, myTank.body.position);
         window.draw(debug);

@@ -5,3 +5,5 @@ ytg.png
 ytg2.png
 ytg3.png
 .clang-format
+app_res.o
+app.rc
