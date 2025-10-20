@@ -223,7 +223,7 @@ int main() {
                     }
                 }
                 // Chọn nâng cấp
-                else if (statsbar.isVisible()) {
+                if (statsbar.isVisible()) {
                     int statIndex = statsbar.checkButtonClick(mousePos);
                     if(statIndex != -1){
                         myTank.upgradeStat(statIndex);
@@ -279,6 +279,7 @@ int main() {
         myTank.Drawtank(window);
         window.setView(window.getDefaultView());
         statsbar.draw(window, uiFont);
+        evolutionUI.update(myTank);
         xpbar.draw(window);
         mmap.Drawmap(window, myTank.body.position);
         window.draw(debug);
