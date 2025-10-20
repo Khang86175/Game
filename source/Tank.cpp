@@ -183,7 +183,7 @@ void TankMachineGun::update(sf::Vector2f pos, int angle) {
 }
 void TankMachineGun::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type) {
     if (gun.delay <= 0) {
-        bullets.push_back(Bullet(gun.position, angle, gun.size.y*0.4,gun.size.x, bSpeed, bLife, bDmg,type));
+        bullets.push_back(Bullet(gun.position, rand() % 36 + angle - 18, gun.size.y*0.25,gun.size.x, bSpeed, bLife, bDmg*0.5,type));
         gun.delay = gun.reload;
     }
 }
@@ -202,7 +202,7 @@ void TankDestroyer::update(sf::Vector2f pos, int angle) {
 }
 void TankDestroyer::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type) {
     if (gun.delay == 0) {
-        bullets.push_back(Bullet(gun.position, angle, gun.size.y*2/3,gun.size.x, bSpeed * 0.8f, bLife*1.3f, bDmg * 2.f,type));
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y*2/3,gun.size.x, bSpeed * 0.8f, bLife*1.3f, bDmg * 4.f,type));
         gun.delay = gun.reload;
     }
 }
@@ -221,7 +221,7 @@ void TankSniper::update(sf::Vector2f pos, int angle) {
 }
 void TankSniper::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type) {
     if (gun.delay <= 0) {
-        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2,gun.size.x, bSpeed * 1.3f, bLife * 1.5f, bDmg * 1.2f,type));
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2,gun.size.x, bSpeed * 1.3f, bLife * 1.5f, bDmg * 1.5f,type));
         gun.delay = gun.reload;
     }
 }
@@ -239,7 +239,7 @@ void TankAssassin::update(sf::Vector2f pos, int angle) {
 }
 void TankAssassin::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type) {
     if (gun.delay <= 0) {
-        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2,gun.size.x, bSpeed * 1.3f, bLife * 1.8f, bDmg * 1.3f,type));
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2,gun.size.x, bSpeed * 1.6f, bLife * 1.3f, bDmg * 2.f,type));
         gun.delay = gun.reload;
     }
 }
@@ -320,7 +320,7 @@ void MyTank::applyStats(){
     body.setMaxHp(base_maxhp * pow(1.2,(1+stats.maxhp)));
     body.setBodyDmg(base_body_dmg * (1+stats.body_dmg*0.2f));
     acceleration = base_acceleration * (1+stats.move_speed*0.06f);
-    int newReload = base_reload - stats.reload*5;
+    int newReload = base_reload - stats.reload*4;
      switch (tankType) {
         case TankType::BASIC:
             if (tankBasic) tankBasic->setReload(newReload);
@@ -329,19 +329,19 @@ void MyTank::applyStats(){
             if (tankTwin) tankTwin->setReload(newReload);
             break;
         case TankType::SNIPER:
-            if (tankSniper) tankSniper->setReload(newReload);
+            if (tankSniper) tankSniper->setReload(newReload*1.25);
             break;
         case TankType::MACHINE_GUN:
-            if (tankMachineGun) tankMachineGun->setReload(newReload);
+            if (tankMachineGun) tankMachineGun->setReload(newReload/4);
             break;
         case TankType::TRIPLE:
             if (tankTriple) tankTriple->setReload(newReload);
             break;
         case TankType::ASSASSIN:
-            if (tankAssassin) tankAssassin->setReload(newReload);
+            if (tankAssassin) tankAssassin->setReload(newReload*1.5);
             break;
         case TankType::DESTROYER:
-            if (tankDestroyer) tankDestroyer->setReload(newReload);
+            if (tankDestroyer) tankDestroyer->setReload(newReload*2);
             break;
     }
 }
@@ -728,23 +728,92 @@ void EnemyTank::shoot(std::vector<Bullet> &bullets, int angle){
 TankType EnemyTank::getTankType(){
     return tankType;
 }
-int EnemyTank::NextMove(MyTank &target){
-    int dx = target.body.position.x - body.position.x;
-    int dy = target.body.position.y - body.position.y;
-    int angle = (int)(std::atan2((float)dy, (float)dx) * 180.f / 3.14f);
-    return angle;
-    // target.body.hitbox_r;
-    // target.body.velocity.x;
-    // target.body.velocity.y;
+int EnemyTank::NextMove(MyTank &target) {
+    // --- Các hằng số để điều chỉnh hành vi của bot ---
+    const float PI = 3.14159265f;
+    const float MIN_COMBAT_DISTANCE = 300.f; // Tăng khoảng cách để có không gian né
+    const float MAX_COMBAT_DISTANCE = 450.f;
+    const float COLLISION_BUFFER = 50.f;
 
-    // body.velocity.x+=acceleration;
-    // body.velocity.y+=acceleration;
-    // body.velocity.x-=acceleration;
-    // body.velocity.y-=acceleration;
+    // ==========================================================
+    // PHẦN 1: TÍNH TOÁN GÓC BẮN DỰ ĐOÁN
+    // ==========================================================
 
+    float dx = target.body.position.x - this->body.position.x;
+    float dy = target.body.position.y - this->body.position.y;
+    
+    // Góc mặc định là bắn thẳng vào vị trí hiện tại của mục tiêu
+    float aimAngleRad = std::atan2(dy, dx);
 
+    // Lấy các thông số cần thiết
+    float bulletSpeed = this->getBulletSpeed();
+    float bulletLife = this->getBulletLife(); // Lấy thời gian tồn tại của đạn
+    float targetVelX = target.body.velocity.x;
+    float targetVelY = target.body.velocity.y;
+
+    // Giải phương trình bậc hai a*t^2 + b*t + c = 0 để tìm thời gian va chạm (t)
+    float a = targetVelX * targetVelX + targetVelY * targetVelY - bulletSpeed * bulletSpeed;
+    float b = 2 * (dx * targetVelX + dy * targetVelY);
+    float c = dx * dx + dy * dy;
+
+    float discriminant = b * b - 4 * a * c;
+
+    if (discriminant >= 0) {
+        float t1 = (-b - std::sqrt(discriminant)) / (2 * a); // Tìm nghiệm nhỏ hơn trước
+        float t2 = (-b + std::sqrt(discriminant)) / (2 * a);
+
+        float timeToIntercept = -1.f;
+        if (t1 > 0 && t2 > 0) {
+            timeToIntercept = std::min(t1, t2);
+        } else {
+            timeToIntercept = std::max(t1, t2); // Lấy nghiệm dương duy nhất nếu có
+        }
+        
+        // *** ĐIỀU KIỆN MỚI: KIỂM TRA THỜI GIAN SỐNG CỦA ĐẠN ***
+        // Chỉ nhắm bắn dự đoán nếu thời gian va chạm là hợp lệ VÀ đạn còn tồn tại
+        if (timeToIntercept > 0 && timeToIntercept < bulletLife) {
+            float interceptX = target.body.position.x + targetVelX * timeToIntercept;
+            float interceptY = target.body.position.y + targetVelY * timeToIntercept;
+            aimAngleRad = std::atan2(interceptY - this->body.position.y, interceptX - this->body.position.x);
+        }
+        // Nếu không, bot sẽ dùng góc bắn thẳng mặc định đã tính ở trên.
+    }
+
+    // ==========================================================
+    // PHẦN 2: LOGIC DI CHUYỂN
+    // ==========================================================
+    
+    float dist = std::sqrt(dx * dx + dy * dy);
+
+    if (dist > 1.f) {
+        float normDx = dx / dist;
+        float normDy = dy / dist;
+
+        // Ưu tiên 1: Tránh va chạm
+        if (dist < this->body.hitbox_r + target.body.hitbox_r + COLLISION_BUFFER) {
+            this->body.velocity.x -= normDx * this->acceleration;
+            this->body.velocity.y -= normDy * this->acceleration;
+        }
+        // Ưu tiên 2: Giữ khoảng cách chiến đấu
+        else if (dist > MAX_COMBAT_DISTANCE) {
+            this->body.velocity.x += normDx * this->acceleration;
+            this->body.velocity.y += normDy * this->acceleration;
+        }
+        else if (dist < MIN_COMBAT_DISTANCE) {
+            this->body.velocity.x -= normDx * this->acceleration;
+            this->body.velocity.y -= normDy * this->acceleration;
+        }
+        // Ưu tiên 3: Di chuyển ngang (strafe) để đối phó với mục tiêu di chuyển cắt mặt
+        else {
+            // Vector vuông góc với (normDx, normDy) là (-normDy, normDx)
+            // Giúp bot vừa giữ khoảng cách, vừa né đạn của mục tiêu
+            this->body.velocity.x += -normDy * this->acceleration;
+            this->body.velocity.y += normDx * this->acceleration;
+        }
+    }
+
+    // ==========================================================
+    // PHẦN 3: TRẢ VỀ GÓC BẮN (THEO ĐỘ)
+    // ==========================================================
+    return static_cast<int>(aimAngleRad * 180.f / PI);
 }
-
-
-
-
