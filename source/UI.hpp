@@ -10,7 +10,7 @@ public:
     sf::CircleShape enemy;
     int Mapsize;
     Minimap(float x, float y, float size,int Mapsize);
-    void Drawmap(sf::RenderWindow &window,sf::Vector2f playerpos={120,120},sf::Vector2f enemypos={120,120});
+    void Drawmap(sf::RenderWindow &window,sf::Vector2f playerpos={120,120},sf::Vector2f enemypos={2000,2000});
 };
 class XpBar{
 private:

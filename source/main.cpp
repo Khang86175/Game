@@ -232,10 +232,20 @@ int main() {
                     }
                 }
             }
-            int botangle=enemyTank.NextMove(myTank);
+            if(enemyTank.alive==true){
+                int botangle=enemyTank.NextMove(myTank);
+                enemyTank.update(botangle);
+                enemyTank.shoot(enemy_bullets,botangle);
+            }
+            else if(enemyTank.timetorespawn <=currentFrame){
+                float x,y;
+                do {
+                    x = rand() % (int)(MapSize * 2) - MapSize;
+                    y = rand() % (int)(MapSize * 2) - MapSize;
+                } while (std::hypot(x-myTank.body.position.x, y-myTank.body.position.y) <= 500.f);
+                enemyTank.NewEnemy(x,y,bodysize,TankType(rand()%7),myTank.level);
+            }
             myTank.update(angle);
-            enemyTank.update(botangle);
-            enemyTank.shoot(enemy_bullets,botangle);
             xpbar.update(myTank);
             statsbar.update(myTank);
             evolutionUI.update(myTank);
@@ -266,14 +276,19 @@ int main() {
             }
 
             handleTankObstacleCollision(myTank, obs);
-            handleBotObstacleCollision(enemyTank,obs);
+            if(enemyTank.alive)
+                handleBotObstacleCollision(enemyTank,obs);
             handleBulletObstacleCollision(my_bullets, obs, myTank);
             handleBulletTankCollision(enemy_bullets, myTank.body);
-            handleBulletTankCollision(my_bullets,enemyTank.body);
+            if(enemyTank.alive)
+                handleBulletTankCollision(my_bullets,enemyTank.body);
             handleBullet_BulletCollision(enemy_bullets, my_bullets);
             handle2ObstacleCollision(obs);
-            handleTankBotCollision(myTank,enemyTank);
-
+            if(enemyTank.alive)
+                handleTankBotCollision(myTank,enemyTank);
+            if(enemyTank.body.hp <=0){
+                enemyTank.Die(myTank);
+            }
             if (myTank.body.hp <= 0) {
                 gameOver = true;
                 high.addScore(playerName, myTank.score);
@@ -296,14 +311,18 @@ int main() {
         for (auto& b : enemy_bullets) b.draw(window);
         for (auto& o : obs) o.DrawObs(window);
         myTank.Drawtank(window);
-        enemyTank.Drawtank(window);
+        if(enemyTank.alive)
+            enemyTank.Drawtank(window);
 
         // Draw UI
         window.setView(window.getDefaultView());
         statsbar.draw(window, uiFont);
         evolutionUI.draw(window);
         xpbar.draw(window);
-        minimap.Drawmap(window,myTank.body.position,enemyTank.body.position);
+        if(enemyTank.alive)
+            minimap.Drawmap(window,myTank.body.position,enemyTank.body.position);
+        else
+            minimap.Drawmap(window,myTank.body.position);
         //window.draw(debug);
         window.display();
 

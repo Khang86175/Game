@@ -20,6 +20,8 @@ void Minimap::Drawmap(sf::RenderWindow &window,sf::Vector2f playerpos,sf::Vector
     enemy.setPosition({enemypos.x/Mapsize*map.getSize().x/2+map.getPosition().x,enemypos.y/Mapsize*map.getSize().y/2+map.getPosition().y});
     window.draw(map);
     window.draw(player);
+    if(enemypos.x != 2000 && enemypos.y != 2000)
+        window.draw(enemy);
 }
 
 XpBar::XpBar(float x, float y, sf::Vector2f size, MyTank &mytank,sf::Font &font) : pos(x,y), xpText(font), scoreText(font), size(size){

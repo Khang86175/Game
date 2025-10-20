@@ -191,11 +191,15 @@ public:
 class EnemyTank{
 public:
     Obj body;
+    int baselevel;
+    int timetorespawn;
     HealthBar hp_bar;
     float friction;
     float acceleration=0.25;
     sf::CircleShape bodyShape;
-    Stats stats; 
+    Stats stats;
+    bool alive;
+    int Xp_reward;
 
     TankType tankType;
 
@@ -210,13 +214,13 @@ public:
     float base_hp_regen = 0.1f;
     float base_maxhp = 100;
     float base_body_dmg = 2;
-    float base_bullet_speed = 10;
+    float base_bullet_speed = 6;
     int base_bullet_life = fps*5;
     float base_bullet_dmg = 3;
     int base_reload = 60;
     float base_acceleration = 0.25;
 
-    EnemyTank(float x, float y, float size,float mapsize,TankType tanktype);
+    EnemyTank(float x, float y, float size,float mapsize,TankType tankType);
     ~EnemyTank();
     void update(int angle);
     float getBulletSpeed();
@@ -226,5 +230,7 @@ public:
     void shoot(std::vector<Bullet> &bullets, int angle);
     TankType getTankType();
     int NextMove(MyTank &target);
+    void NewEnemy(float x, float y, float size, TankType tankType,int level);
+    void Die(MyTank &myTank);
 };
 
