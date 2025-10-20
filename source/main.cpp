@@ -235,6 +235,7 @@ int main() {
             myTank.update(angle);
             xpbar.update(myTank);
             statsbar.update(myTank);
+            evolutionUI.update(myTank);
 
             std::stringstream ss;
             ss << "Level: " << myTank.level << "\nScore: " << myTank.score << "\nXp_base: " << myTank.xp_base << "/"
@@ -279,7 +280,7 @@ int main() {
         myTank.Drawtank(window);
         window.setView(window.getDefaultView());
         statsbar.draw(window, uiFont);
-        evolutionUI.update(myTank);
+        evolutionUI.draw(window);
         xpbar.draw(window);
         mmap.Drawmap(window, myTank.body.position);
         window.draw(debug);

@@ -37,7 +37,10 @@ void Cannon::DrawGun(sf::RenderWindow &window){
 void Cannon::setReload(int new_reload){
     reload = new_reload;
 }  
-
+void Cannon::SetOrigin(float x, float y,float size){
+    gun.setPosition({x,y});
+    gun.setOrigin({0,size/3});
+}
 MachineGunCannon::MachineGunCannon(float x, float y,float size, float reload):position({x,y}),angle(0),delay(0), reload(reload), size(size, size){
     gun.setPointCount(4);
     float length = size * 1.8f;
@@ -574,13 +577,20 @@ void MyTank::reset(float x, float y, float size, float mapsize){
     xp_to_lv_up = 30;
     tankType = TankType::BASIC;
     tankTwin = nullptr;
+    tankSniper = nullptr;
+    tankMachineGun = nullptr;
+    tankTriple = nullptr;
+    tankAssassin = nullptr;
+    tankDestroyer = nullptr;
     statPoint = 0;
     stats = {0,0,0,0,0,0,0,0};
     body.velocity={0,0};
     body.hitbox_r=size;
     bodyShape.setRadius(size);
-
+    bodyShape.setOrigin({size,size});
+    
     tankBasic = new TankBasic(x, y, size);
+    tankBasic->gun.SetOrigin(x,y,size);
 }
 
 // ENEMYTANK IS HERE

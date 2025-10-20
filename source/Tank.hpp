@@ -29,6 +29,7 @@ public:
     void update(sf::Vector2f pos, int angle);
     void DrawGun(sf::RenderWindow &window);
     void setReload(int new_reload);
+    void SetOrigin(float x, float y,float size);
 };
 
 class MachineGunCannon{
