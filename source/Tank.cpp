@@ -202,7 +202,7 @@ void TankDestroyer::update(sf::Vector2f pos, int angle) {
 }
 void TankDestroyer::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type) {
     if (gun.delay == 0) {
-        bullets.push_back(Bullet(gun.position, angle, gun.size.y*2/3,gun.size.x, bSpeed * 0.8f, bLife*1.3f, bDmg * 4.f,type));
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y*2/3,gun.size.x, bSpeed * 0.8f, bLife*1.3f, bDmg * 6.f,type));
         gun.delay = gun.reload;
     }
 }
@@ -221,7 +221,7 @@ void TankSniper::update(sf::Vector2f pos, int angle) {
 }
 void TankSniper::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type) {
     if (gun.delay <= 0) {
-        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2,gun.size.x, bSpeed * 1.3f, bLife * 1.5f, bDmg * 1.5f,type));
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2,gun.size.x, bSpeed * 1.3f, bLife * 1.5f, bDmg * 2.f,type));
         gun.delay = gun.reload;
     }
 }
@@ -239,7 +239,7 @@ void TankAssassin::update(sf::Vector2f pos, int angle) {
 }
 void TankAssassin::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type) {
     if (gun.delay <= 0) {
-        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2,gun.size.x, bSpeed * 1.6f, bLife * 1.3f, bDmg * 2.f,type));
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2,gun.size.x, bSpeed * 1.6f, bLife * 1.3f, bDmg * 4.f,type));
         gun.delay = gun.reload;
     }
 }
@@ -338,10 +338,10 @@ void MyTank::applyStats(){
             if (tankTriple) tankTriple->setReload(newReload);
             break;
         case TankType::ASSASSIN:
-            if (tankAssassin) tankAssassin->setReload(newReload*1.5);
+            if (tankAssassin) tankAssassin->setReload(newReload*1.25);
             break;
         case TankType::DESTROYER:
-            if (tankDestroyer) tankDestroyer->setReload(newReload*2);
+            if (tankDestroyer) tankDestroyer->setReload(newReload*1.75);
             break;
     }
 }
@@ -616,7 +616,9 @@ EnemyTank::EnemyTank(float x, float y, float size, float mapsize,TankType tankTy
     tankDestroyer = nullptr;
 }
 void EnemyTank::NewEnemy(float x, float y, float size, TankType tanktype, int level){
-    Xp_reward=level*50;
+    Xp_reward=level*100;
+    if(level > 45 )
+        Xp_reward*=(level-45)/15;
     alive=true;
     bodyShape.setRadius(size);
     bodyShape.setFillColor(sf::Color(239,77,85));
@@ -782,7 +784,7 @@ void EnemyTank::shoot(std::vector<Bullet> &bullets, int angle){
     int bLife = base_bullet_life + (stats.bullet_penetration+baselevel) * 30;
     if(bLife>600)
         bLife=600;
-    float bDmg = base_bullet_dmg * (1 + (stats.bullet_dmg+baselevel) * 0.4f);
+    float bDmg = base_bullet_dmg * (1 + (stats.bullet_dmg+baselevel) * 0.3f);
 
     switch (tankType) {
         case TankType::BASIC:
@@ -812,16 +814,20 @@ TankType EnemyTank::getTankType(){
     return tankType;
 }
 void EnemyTank::Die(MyTank& myTank){
-    timetorespawn=currentFrame+fps*(rand()%30+30);
+    timetorespawn=currentFrame+fps*(rand()%30+45);
     alive=false;
-    if (tankBasic) delete tankBasic;
-    if (tankTwin) delete tankTwin;
-    if (tankSniper) delete tankSniper;
-    if (tankMachineGun) delete tankMachineGun;
-    if (tankTriple) delete tankTriple;
-    if (tankAssassin) delete tankAssassin;
-    if (tankDestroyer) delete tankDestroyer;
+
+    if (tankBasic) { delete tankBasic; tankBasic = nullptr; }
+    if (tankTwin) { delete tankTwin; tankTwin = nullptr; }
+    if (tankSniper) { delete tankSniper; tankSniper = nullptr; }
+    if (tankMachineGun) { delete tankMachineGun; tankMachineGun = nullptr; }
+    if (tankTriple) { delete tankTriple; tankTriple = nullptr; }
+    if (tankAssassin) { delete tankAssassin; tankAssassin = nullptr; }
+    if (tankDestroyer) { delete tankDestroyer; tankDestroyer = nullptr; }
+
+
     myTank.score+=Xp_reward;
+    myTank.levelUp();
 }
 int EnemyTank::NextMove(MyTank &target) {
     // --- Các hằng số để điều chỉnh hành vi của bot ---

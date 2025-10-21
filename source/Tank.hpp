@@ -161,7 +161,7 @@ public:
     // Base stats
     float base_hp_regen = 0.1f;
     float base_maxhp = 100;
-    float base_body_dmg = 2;
+    float base_body_dmg = 4;
     float base_bullet_speed = 4;
     int base_bullet_life = fps*5;
     float base_bullet_dmg = 3;

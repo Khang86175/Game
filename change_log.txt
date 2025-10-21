@@ -1,3 +1,8 @@
+v1.0.2 - 21/10/2025
+fix some bug
+tối ưu hóa code
+cân bằng chỉ số
+
 18/10/2025
 sửa hàm handleCollisionWith thành void
 tối ưu hàm handleCollisionWith để có thể dùng mọi trường hợp va chạm giữa 2 Obj
