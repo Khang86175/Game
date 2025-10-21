@@ -80,10 +80,13 @@ int main() {
     std::vector<Bullet> enemy_bullets;
 
     auto resetWorld = [&]() {
+        enemyTank.Die(myTank);
+        enemyTank.timetorespawn=1800;
         myTank.reset(0, 0, bodysize, MapSize);
         my_bullets.clear();
         enemy_bullets.clear();
         obs.clear();
+        currentFrame=0;
         for (int i = 0; i < 100; ++i) {
             int t = rand() % 3 + 3;
             float x, y;
@@ -140,7 +143,6 @@ int main() {
         if (state == MENU) {
             if (start.checkStartClick(mousePos)&& delay_click == 0 ) {
                 state = PLAYING;
-                currentFrame=0;
                 playerName = start.getPlayerName();
                 gameOver = false;
                 delay_click=10;
@@ -245,7 +247,7 @@ int main() {
                     x = rand() % (int)(MapSize * 2) - MapSize;
                     y = rand() % (int)(MapSize * 2) - MapSize;
                 } while (std::hypot(x-myTank.body.position.x, y-myTank.body.position.y) <= 500.f);
-                enemyTank.NewEnemy(x,y,bodysize,TankType(rand()%7),myTank.level);
+                enemyTank.NewEnemy(x,y,bodysize,myTank.level < 10 ? TankType(0): myTank.level < 20 ? TankType(rand()%3+1):TankType(rand()%3+4),myTank.level);
                 getxp=true;
             }
             myTank.update(angle);

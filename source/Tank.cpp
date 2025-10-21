@@ -782,7 +782,7 @@ void EnemyTank::shoot(std::vector<Bullet> &bullets, int angle){
     int bLife = base_bullet_life + (stats.bullet_penetration+baselevel) * 30;
     if(bLife>600)
         bLife=600;
-    float bDmg = base_bullet_dmg * (1 + stats.bullet_dmg) * 0.4f;
+    float bDmg = base_bullet_dmg * (1 + (stats.bullet_dmg+baselevel) * 0.4f);
 
     switch (tankType) {
         case TankType::BASIC:
@@ -812,7 +812,7 @@ TankType EnemyTank::getTankType(){
     return tankType;
 }
 void EnemyTank::Die(MyTank& myTank){
-    timetorespawn=currentFrame+fps*(rand()%60-30);
+    timetorespawn=currentFrame+fps*(rand()%30+30);
     alive=false;
     if (tankBasic) delete tankBasic;
     if (tankTwin) delete tankTwin;
