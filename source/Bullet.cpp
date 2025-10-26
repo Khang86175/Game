@@ -1,7 +1,7 @@
 #include "Bullet.hpp"
 
-Bullet::Bullet(sf::Vector2f pos, float angle,float size,float gun_length,float speed,int timetodie, float dmg,int type)
-    : body(pos.x, pos.y, 2000, size, 10, 0, dmg), timetodie(timetodie), alive(true){
+Bullet::Bullet(sf::Vector2f pos, float angle,float size,float gun_length,float speed,int timetodie, float dmg,int type,int bhp)
+    : body(pos.x, pos.y, 2000, size, bhp, 0, dmg), timetodie(timetodie), alive(true){
     shape.setRadius(size);
     shape.setFillColor(type==0? sf::Color(0,178,225): sf::Color(239,77,85));
     shape.setOutlineThickness(3.f);

@@ -66,7 +66,7 @@ public:
     TankBasic(float x, float y, float size);
     void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
     void update(sf::Vector2f pos, int angle);
-    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type,int bhp);
     void setReload(int new_reload);
 };
 
@@ -77,7 +77,7 @@ public:
 
     TankTwin(float x, float y, float size);
     void update(sf::Vector2f pos, float angle);
-    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type,int bhp);
     void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
     void setReload(int new_reload); 
 };
@@ -88,7 +88,7 @@ public:
     float gunOffSet;
     TankTriple(float x, float y, float size);
     void update(sf::Vector2f pos, float angle);
-    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type,int bhp);
     void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
     void setReload(int new_reload); 
 };
@@ -98,7 +98,7 @@ public:
     MachineGunCannon gun;
     TankMachineGun(float x, float y, float size);
     void update(sf::Vector2f pos, int angle);
-    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type,int bhp);
     void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
     void setReload(int new_reload); 
 };
@@ -108,7 +108,7 @@ public:
     DestroyerCannon gun;
     TankDestroyer(float x, float y, float size);
     void update(sf::Vector2f pos, int angle);
-    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type,int bhp);
     void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
     void setReload(int new_reload); 
 };
@@ -118,7 +118,7 @@ public:
     Cannon gun;
     TankSniper(float x, float y, float size);
     void update(sf::Vector2f pos, int angle);
-    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type,int bhp);
     void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
     void setReload(int new_reload); 
 };
@@ -129,7 +129,7 @@ public:
 
     TankAssassin(float x, float y, float size);
     void update(sf::Vector2f pos, int angle);
-    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type);
+    void shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type,int bhp);
     void drawTank(sf::RenderWindow &window, sf::CircleShape &bodyShape);
     void setReload(int new_reload); 
 };
