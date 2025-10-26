@@ -183,7 +183,7 @@ void TankMachineGun::update(sf::Vector2f pos, int angle) {
 }
 void TankMachineGun::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type,int bhp) {
     if (gun.delay <= 0) {
-        bullets.push_back(Bullet(gun.position, rand() % 36 + angle - 18, gun.size.y*0.25,gun.size.x, bSpeed, bLife, bDmg*0.5,type,bhp));
+        bullets.push_back(Bullet(gun.position, rand() % 36 + angle - 18, gun.size.y*0.25,gun.size.x, bSpeed, bLife*0.6, bDmg*0.5,type,bhp*0.75));
         gun.delay = gun.reload;
     }
 }
@@ -202,7 +202,7 @@ void TankDestroyer::update(sf::Vector2f pos, int angle) {
 }
 void TankDestroyer::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type,int bhp) {
     if (gun.delay == 0) {
-        bullets.push_back(Bullet(gun.position, angle, gun.size.y*2/3,gun.size.x, bSpeed * 0.8f, bLife*1.3f, bDmg * 6.f,type,bhp*1.5));
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y*2/3,gun.size.x, bSpeed * 0.8f, bLife*1.3f, bDmg * 5.f,type,bhp*1.5));
         gun.delay = gun.reload;
     }
 }
@@ -221,7 +221,7 @@ void TankSniper::update(sf::Vector2f pos, int angle) {
 }
 void TankSniper::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type,int bhp) {
     if (gun.delay <= 0) {
-        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2,gun.size.x, bSpeed * 1.3f, bLife * 1.5f, bDmg * 2.f,type,bhp));
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2,gun.size.x, bSpeed * 1.3f, bLife * 1.3f, bDmg * 2.f,type,bhp));
         gun.delay = gun.reload;
     }
 }
@@ -239,7 +239,7 @@ void TankAssassin::update(sf::Vector2f pos, int angle) {
 }
 void TankAssassin::shoot(std::vector<Bullet> &bullets, int angle, float bSpeed, int bLife, float bDmg,int type,int bhp) {
     if (gun.delay <= 0) {
-        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2,gun.size.x, bSpeed * 1.6f, bLife * 1.3f, bDmg * 4.f,type,bhp*1.2));
+        bullets.push_back(Bullet(gun.position, angle, gun.size.y/2,gun.size.x, bSpeed * 2.f, bLife * 1.3f, bDmg * 4.f,type,bhp*1.25));
         gun.delay = gun.reload;
     }
 }
@@ -354,7 +354,7 @@ void MyTank::levelUp(){
         int temp=(xp_to_lv_up-xp_base)*(std::max(1.35-level/10,1.05));
         xp_base = xp_to_lv_up;
         xp_to_lv_up += temp;
-        if(level<=50)
+        if(level<=45)
             statPoint += 1;
 
         body.hp = body.maxhp;
@@ -377,7 +377,7 @@ bool MyTank::canEvolve() {
     //  std::cout << "Aucune évolution possible" << std::endl;
     return false;
 }
-bool MyTank::evolveTank(TankType newType) {
+bool MyTank::evolveTank(TankType newType,sf::View &mainview) {
     if (!canEvolveTo(tankType, newType)) return false;
     // Xóa tank cũ
     if (tankBasic) { delete tankBasic; tankBasic = nullptr; }
@@ -399,24 +399,31 @@ bool MyTank::evolveTank(TankType newType) {
     switch (newType) {
         case TankType::BASIC:
             tankBasic = new TankBasic(body.position.x, body.position.y, radius);
+            mainview.setSize({WIDTH*1.5,HEIGHT*1.5});
             break;
         case TankType::TWIN:
             tankTwin = new TankTwin(body.position.x, body.position.y, radius);
+            mainview.setSize({WIDTH*1.65,HEIGHT*1.65});
             break;
         case TankType::SNIPER:
             tankSniper = new TankSniper(body.position.x, body.position.y, radius);
+            mainview.setSize({WIDTH*2,HEIGHT*2});
             break;
         case TankType::MACHINE_GUN:
             tankMachineGun = new TankMachineGun(body.position.x, body.position.y, radius);
+            mainview.setSize({WIDTH*1.65,HEIGHT*1.65});
             break;
         case TankType::TRIPLE:
             tankTriple = new TankTriple(body.position.x, body.position.y, radius);
+            mainview.setSize({WIDTH*1.8,HEIGHT*1.8});
             break;
         case TankType::ASSASSIN:
             tankAssassin = new TankAssassin(body.position.x, body.position.y, radius);
+            mainview.setSize({WIDTH*2.5,HEIGHT*2.5});
             break;
         case TankType::DESTROYER:
             tankDestroyer = new TankDestroyer(body.position.x, body.position.y, radius);
+            mainview.setSize({WIDTH*1.8,HEIGHT*1.8});
             break;
     }
     applyStats();
@@ -536,7 +543,7 @@ void MyTank::shoot(std::vector<Bullet> &bullets, int angle){
     float bSpeed = base_bullet_speed * (1 + stats.bullet_speed * 0.15f);
     int bLife = base_bullet_life + stats.bullet_penetration * 30;
     float bDmg = base_bullet_dmg * (1 + stats.bullet_dmg * 0.4f);
-    float bhp = 10 + stats.bullet_penetration*0.5;
+    float bhp = 10 *pow(1.12,stats.bullet_penetration);
     switch (tankType) {
         case TankType::BASIC:
             if (tankBasic) tankBasic->shoot(bullets, angle, bSpeed, bLife, bDmg,0,bhp);

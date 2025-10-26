@@ -36,7 +36,6 @@ int main() {
     );
     window.setFramerateLimit(fps);
     sf::View mainview;
-    mainview.setSize({ WIDTH * 1.5f, HEIGHT * 1.5f });
     // ------------------- LOAD RESOURCES ------------------- //
     sf::Font font;
     if (!font.openFromFile("assets/font/arial.ttf")) return -1;
@@ -99,6 +98,7 @@ int main() {
         enemy_bullets.clear();
         obs.clear();
         currentFrame = 0;
+        mainview.setSize({ WIDTH * 1.5f, HEIGHT * 1.5f });
 
         for (int i = 0; i < 100; ++i) {
             int t = rand() % 3 + 3;
@@ -139,6 +139,7 @@ int main() {
                 }
                 if (k->scancode == sf::Keyboard::Scancode::T && state == PLAYING) {
                     myTank.reset(myTank.body.Getx(), myTank.body.Gety(), bodysize, MapSize);
+                    mainview.setSize({WIDTH*1.5,HEIGHT*1.5});
                     myTank.levelUp();
                 }
             }
@@ -239,7 +240,7 @@ int main() {
                 if (evolutionUI.isVisible()) {
                     TankType selected = evolutionUI.getSelectedEvolution(mousePos);
                     if (selected != myTank.getTankType()) {
-                        if (myTank.evolveTank(selected)) {
+                        if (myTank.evolveTank(selected,mainview)) {
                             evolutionUI.setVisible(false);
                             delay_click = 10;
                         }

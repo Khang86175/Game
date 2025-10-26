@@ -1,3 +1,6 @@
+v1.1 - 26/10/2025
+cân bằng chỉ số và thêm tăng tầm nhìn khi tiến hóa
+
 v1.0.2 - 21/10/2025
 fix some bug
 tối ưu hóa code

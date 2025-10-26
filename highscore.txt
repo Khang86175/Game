@@ -1,5 +1,6 @@
 "hackerlord" 1034490
 "khangvip2" 123345
+"Player" 75385
 "Player" 50310
 "Player" 47000
 "khang" 46000
@@ -7,4 +8,3 @@
 "Player" 43205
 "123" 30000
 "Player" 24715
-"Player" 23035

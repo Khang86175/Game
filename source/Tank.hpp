@@ -175,7 +175,7 @@ public:
     void addScore(int point);
     void levelUp();
     bool canEvolve();
-    bool evolveTank(TankType newType);
+    bool evolveTank(TankType newType,sf::View &mainview);
     float getBulletSpeed();
     int getBulletLife();
     float getBulletDamage();
