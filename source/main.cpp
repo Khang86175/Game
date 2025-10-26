@@ -39,18 +39,18 @@ int main() {
     mainview.setSize({ WIDTH * 1.5f, HEIGHT * 1.5f });
     // ------------------- LOAD RESOURCES ------------------- //
     sf::Font font;
-    if (!font.openFromFile("arial.ttf")) return -1;
+    if (!font.openFromFile("assets/font/arial.ttf")) return -1;
     sf::Text debug(font);
     debug.setCharacterSize(14);
     debug.setFillColor(sf::Color::Red);
 
     sf::Font uiFont;
-    if (!uiFont.openFromFile("Supercell-Magic Regular.ttf")) return -1;
+    if (!uiFont.openFromFile("assets/font/Supercell-Magic Regular.ttf")) return -1;
     sf::Texture bg;
-    if (!bg.loadFromFile("assets/background.png")) return -1;
+    if (!bg.loadFromFile("assets/background/background.png")) return -1;
     sf::Texture hsTex;
     sf::Texture* hsBG = &bg;
-    if (hsTex.loadFromFile("assets/hightscore.png")) hsBG = &hsTex;
+    if (hsTex.loadFromFile("assets/background/hightscore.png")) hsBG = &hsTex;
 
     // ------------------- GAME STATE SCREENS ------------------- //
     GameState state = MENU;

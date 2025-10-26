@@ -80,12 +80,12 @@ private:
     sf::Vector2f windowSize;
     std::vector<sf::Texture> textures;
     std::vector<std::string> texturePaths = {
-        "assets/Twin.png", 
-        "assets/Sniper.png", 
-        "assets/MachineGun.png", 
-        "assets/Triple.png", 
-        "assets/Assassin.png", 
-        "assets/Destroyer.png"
+        "assets/tank/Twin.png", 
+        "assets/tank/Sniper.png", 
+        "assets/tank/MachineGun.png", 
+        "assets/tank/Triple.png", 
+        "assets/tank/Assassin.png", 
+        "assets/tank/Destroyer.png"
     };
     TankType currentTankType;
     std::vector<TankType> availableEvolutions;
